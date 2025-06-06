@@ -244,24 +244,23 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     startNewChat();
   }, [startNewChat]);
 
-  const regenerateResponseAtIndex = useCallback(async (messageIndex: number) => {
-    if (messageIndex >= messages.length || messages[messageIndex].role !== 'assistant') return;
-
-    // Find the user message that prompted this assistant response
-    let userMessageIndex = -1;
-    for (let i = messageIndex - 1; i >= 0; i--) {
-      if (messages[i].role === 'user') {
-        userMessageIndex = i;
-        break;
-      }
+  // Function to regenerate a response for a specific user message by index
+  const regenerateResponseAtIndex = useCallback(async (userMessageIndex: number) => {
+    // Validate the index
+    if (userMessageIndex < 0 || userMessageIndex >= messages.length) {
+      console.error('Invalid user message index:', userMessageIndex);
+      return;
     }
 
-    if (userMessageIndex === -1) return;
-
+    // Verify it's a user message
     const userMessage = messages[userMessageIndex];
+    if (userMessage.role !== 'user') {
+      console.error('Expected a user message at index:', userMessageIndex);
+      return;
+    }
 
-    // Remove the assistant message and any subsequent messages
-    const messagesUpToUserMessage = messages.slice(0, messageIndex);
+    // Remove all messages after this user message
+    const messagesUpToUserMessage = messages.slice(0, userMessageIndex + 1);
     setMessages(messagesUpToUserMessage);
     updateCurrentChat(messagesUpToUserMessage);
 
@@ -269,60 +268,116 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
 
     try {
-      // Get current messages at the time of regeneration
-      const currentMessages = [systemMessage, ...messagesUpToUserMessage];
+      // Extract content from user message
+      const content = typeof userMessage.content === 'string' 
+        ? userMessage.content 
+        : 'Could not retrieve message content';
 
-      // Extract content and image data from user message
-      let textContent = '';
-      let imageData: string | null = null;
+      // Check if this is a search message
+      const isSearchMessage = userMessage.model === 'search' || content.startsWith('🔍');
 
-      if (typeof userMessage.content === 'string') {
-        textContent = userMessage.content;
-      } else if (Array.isArray(userMessage.content)) {
-        // Handle multimodal content
-        for (const item of userMessage.content) {
-          if (item.type === 'text') {
-            textContent = item.text || item.content || '';
-          } else if (item.type === 'image' && item.image_data) {
-            imageData = item.image_data;
-          }
+      if (isSearchMessage) {
+        // Extract the actual search query (remove 🔍 if present)
+        const searchQuery = content.startsWith('🔍') ? content.replace('🔍 ', '').trim() : content;
+
+        // Perform search using Serper API
+        const searchResponse = await fetch('/api/search', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ query: searchQuery }),
+        });
+
+        if (!searchResponse.ok) {
+          throw new Error('Search failed');
         }
-      }
 
-      let aiResponse;
+        const searchData = await searchResponse.json();
 
-      if (imageData) {
-        // Use the image-enabled API call with preserved image data
-        aiResponse = await sendMessageWithImage(
-          textContent,
-          imageData,
-          'gpt-4o',
+        // Create a refined prompt with search results for GPT-4o-mini
+        const searchResults = searchData.organic?.slice(0, 5).map((result: any) => 
+          `Title: ${result.title}\nSnippet: ${result.snippet}\nURL: ${result.link}`
+        ).join('\n\n') || 'No search results found.';
+
+        const refinedPrompt = `Based on the following search results for "${searchQuery}", provide a comprehensive and accurate answer:
+
+${searchResults}
+
+Please synthesize this information and provide a helpful response that directly answers the user's query. Include relevant details and cite sources when appropriate.`;
+
+        // Send to GPT-4o-mini for refinement
+        const currentMessages = [
+          systemMessage,
+          ...messagesUpToUserMessage,
+          { role: 'user', content: refinedPrompt }
+        ];
+
+        const aiResponse = await sendMessage(
+          refinedPrompt,
+          'gpt-4o-mini',
           currentMessages
         );
+
+        // Add the refined AI response to the chat
+        const newMessage: Message = {
+          ...aiResponse,
+          timestamp: new Date().toISOString(),
+        };
+
+        const finalMessages = [...messagesUpToUserMessage, newMessage];
+        setMessages(finalMessages);
+        updateCurrentChat(finalMessages);
+
+        toast({
+          title: 'Search response regenerated',
+          description: 'A new search response has been generated',
+          duration: 2000,
+        });
       } else {
-        // Regular text message
-        aiResponse = await sendMessage(
-          textContent,
-          'gpt-4o',
-          currentMessages
-        );
+        // Handle regular (non-search) messages
+        // Get all messages up to the user message, including system message for context
+        const currentMessages = [systemMessage, ...messagesUpToUserMessage];
+
+        // Check if the message contains image data
+        const hasImage = userMessage.imageData || 
+          (Array.isArray(userMessage.content) && 
+           userMessage.content.some((item: any) => item.type === 'image'));
+
+        let aiResponse;
+        if (hasImage) {
+          // Handle image messages with GPT-4o
+          aiResponse = await sendMessageWithImage(
+            typeof userMessage.content === 'string' ? userMessage.content : '',
+            userMessage.imageData,
+            'gpt-4o',
+            currentMessages
+          );
+        } else {
+          // Handle text-only messages with GPT-4o
+          aiResponse = await sendMessage(
+            content,
+            'gpt-4o',
+            currentMessages
+          );
+        }
+
+        // Add the new AI response to the chat
+        const newMessage: Message = {
+          ...aiResponse,
+          timestamp: new Date().toISOString()
+        };
+
+        const finalMessages = [...messagesUpToUserMessage, newMessage];
+        setMessages(finalMessages);
+        updateCurrentChat(finalMessages);
+
+        toast({
+          title: 'Response regenerated',
+          description: 'A new AI response has been generated',
+          duration: 2000,
+        });
       }
-
-      // Add the new AI response to the chat
-      const newMessage: Message = {
-        ...aiResponse,
-        timestamp: new Date().toISOString()
-      };
-
-      const finalMessages = [...messagesUpToUserMessage, newMessage];
-      setMessages(finalMessages);
-      updateCurrentChat(finalMessages);
-
-      toast({
-        title: 'Response regenerated',
-        description: 'A new AI response has been generated',
-        duration: 2000,
-      });
     } catch (error) {
       console.error('Failed to regenerate AI response:', error);
       toast({
@@ -345,7 +400,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setIsLoading(false);
     }
-  }, [messages, toast, updateCurrentChat, systemMessage]);
+  }, [messages, toast, updateCurrentChat, systemMessage, sendMessage, sendMessageWithImage]);
 
   // Function to search and get AI refined response
   const searchAndRespond = useCallback(async (query: string) => {
