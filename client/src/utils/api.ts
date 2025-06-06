@@ -88,62 +88,36 @@ export async function sendMessageWithImage(
 
 export async function sendMessage(
   content: string,
-  model: 'gpt-4o' | 'gpt-4o-mini' | 'llama-4-maverick' | 'deepseek-r1',
+  model: 'gpt-4o' | 'gpt-4o-mini' | 'llama-4-maverick',
   messages: Message[]
 ): Promise<Message> {
   try {
     // Validate model
-    if (!['gpt-4o', 'gpt-4o-mini', 'deepseek-r1', 'llama-4-maverick'].includes(model)) {
+    if (!['gpt-4o', 'gpt-4o-mini', 'llama-4-maverick'].includes(model)) {
       throw new Error('Invalid model selection');
     }
 
-    if (model === 'deepseek-r1') {
-      const data = await apiRequest<{
-        message: { role: 'user' | 'assistant' | 'system'; content: string };
-        model: string;
-      }>({
-        url: '/api/reasoning', // Assuming you have a separate /api/reasoning endpoint
-        method: 'POST',
-        data: {
-          messages: messages.map(({ role, content }) => ({ role, content })),
-        },
-      });
-
-      
-    } else {
-      // Use the improved apiRequest function
-      const data = await apiRequest<{
-        message: { role: 'user' | 'assistant' | 'system'; content: string };
-        model: string;
-      }>({
-        url: '/api/chat',
-        method: 'POST',
-        data: {
-          model: model,
-          messages: messages.map(({ role, content }) => ({ role, content })),
-        },
-      });
-
-      return {
-        role: data.message.role as 'user' | 'assistant' | 'system',
-        content: data.message.content,
+    // Use the improved apiRequest function
+    const data = await apiRequest<{
+      message: { role: 'user' | 'assistant' | 'system'; content: string };
+      model: string;
+    }>({
+      url: '/api/chat',
+      method: 'POST',
+      data: {
         model: model,
-        timestamp: new Date().toISOString(),
-      };
-    }
+        messages: messages.map(({ role, content }) => ({ role, content })),
+      },
+    });
+
+    return {
+      role: data.message.role as 'user' | 'assistant' | 'system',
+      content: data.message.content,
+      model: model,
+      timestamp: new Date().toISOString(),
+    };
   } catch (error) {
     console.error('Error sending message:', error);
     throw error;
   }
-}
-
-
-
-  const data = await response.json();
-  return {
-    role: data.message.role,
-    content: data.message.content,
-    model: data.model || 'deepseek-r1',
-    timestamp: new Date().toISOString(),
-  };
 }
