@@ -141,3 +141,30 @@ export async function sendMessage(
     throw error;
   }
 }
+
+export async function sendReasoningMessage(messages: Message[], sessionId?: string): Promise<Message> {
+  const response = await fetch('/api/reasoning', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      messages: messages.map(({ timestamp, ...msg }) => msg),
+      model: 'deepseek-r1',
+      sessionId,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+  }
+
+  const data = await response.json();
+  return {
+    role: data.message.role,
+    content: data.message.content,
+    model: data.model || 'deepseek-r1',
+    timestamp: new Date().toISOString(),
+  };
+}
