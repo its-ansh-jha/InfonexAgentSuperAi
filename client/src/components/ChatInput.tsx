@@ -33,7 +33,7 @@ export function ChatInput() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Must have either text or an image to submit
     if ((!input.trim() && !imageFile) || isLoading) return;
 
@@ -44,13 +44,13 @@ export function ChatInput() {
       // Regular chat mode - send the message with optional image
       await sendUserMessage(input, imageFile);
     }
-    
+
     // Reset state
     setInput('');
     setImageFile(null);
     setImageName('');
     setIsSearchMode(false);
-    
+
     // Reset textarea height
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
@@ -71,7 +71,7 @@ export function ChatInput() {
       setIsListening(false);
       return;
     }
-    
+
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
       toast({
         title: "Error",
@@ -81,29 +81,29 @@ export function ChatInput() {
       });
       return;
     }
-    
+
     // Create a new SpeechRecognition instance
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
-    
+
     recognition.continuous = false;
     recognition.interimResults = true;
     recognition.lang = 'en-US';
-    
+
     // Handle recognition results
     recognition.onresult = (event) => {
       const transcript = Array.from(event.results)
         .map(result => result[0].transcript)
         .join('');
-      
+
       setInput(prevInput => prevInput + ' ' + transcript);
     };
-    
+
     // Handle end of recognition
     recognition.onend = () => {
       setIsListening(false);
     };
-    
+
     // Handle errors
     recognition.onerror = (event: any) => {
       console.error('Speech recognition error:', event.error);
@@ -114,7 +114,7 @@ export function ChatInput() {
         variant: 'destructive',
       });
     };
-    
+
     // Start recognition
     try {
       recognition.start();
@@ -133,19 +133,19 @@ export function ChatInput() {
       });
     }
   };
-  
+
   const handleImageClick = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
   };
-  
+
   const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    
+
     if (files && files.length > 0) {
       const file = files[0];
-      
+
       // Check if the file is an image
       if (!file.type.startsWith('image/')) {
         toast({
@@ -156,7 +156,7 @@ export function ChatInput() {
         });
         return;
       }
-      
+
       // Check file size (limit to 8MB)
       if (file.size > 8 * 1024 * 1024) {
         toast({
@@ -167,17 +167,17 @@ export function ChatInput() {
         });
         return;
       }
-      
+
       setIsUploadingImage(true);
       setImageName(file.name);
-      
+
       try {
         // Simulate processing time for better UX
         await new Promise(resolve => setTimeout(resolve, 500));
-        
+
         setImageFile(file);
         setIsUploadingImage(false);
-        
+
         toast({
           title: "Image ready",
           description: `Image "${file.name}" is ready to send`,
@@ -195,12 +195,12 @@ export function ChatInput() {
       }
     }
   };
-  
+
   const removeImage = () => {
     setImageFile(null);
     setImageName('');
     setIsUploadingImage(false);
-    
+
     // Reset file input
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -228,7 +228,7 @@ export function ChatInput() {
             accept="image/*"
             className="hidden"
           />
-          
+
           {/* Image preview (if uploaded or uploading) */}
           {(imageFile || isUploadingImage) && (
             <div className="mb-2 flex items-center">
@@ -256,7 +256,7 @@ export function ChatInput() {
               </Badge>
             </div>
           )}
-          
+
           <div className="relative flex items-center bg-neutral-800 rounded-full border border-neutral-700 overflow-hidden">
             <div className="flex items-center pl-3 space-x-1">
               <TooltipProvider>
@@ -304,7 +304,7 @@ export function ChatInput() {
                 </TooltipProvider>
               )}
             </div>
-            
+
             <textarea
               ref={textareaRef}
               value={input}
@@ -316,14 +316,12 @@ export function ChatInput() {
                   ? "Processing image..." 
                   : isSearchMode
                     ? "Search for realtime information..."
-                    : imageFile 
-                      ? "Ask about this image..." 
-                      : "Ask anything..."
+                    : "Type your message... (Real-time queries will auto-search)"
               }
               className="flex-1 py-3 px-3 bg-transparent border-none focus:outline-none focus:ring-0 resize-none text-white placeholder-neutral-500 min-h-[44px] max-h-[200px]"
               disabled={isLoading || isUploadingImage}
             />
-            
+
             <div className="flex items-center pr-2 space-x-1">
               <TooltipProvider>
                 <Tooltip>
@@ -345,7 +343,7 @@ export function ChatInput() {
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-              
+
               <Button
                 type="submit"
                 disabled={isLoading || isUploadingImage || (!input.trim() && !imageFile)}
@@ -355,7 +353,7 @@ export function ChatInput() {
               </Button>
             </div>
           </div>
-          
+
           <div className="text-xs text-neutral-500 text-center mt-1">
             {isListening ? (
               <span className="text-red-400">Listening...</span>

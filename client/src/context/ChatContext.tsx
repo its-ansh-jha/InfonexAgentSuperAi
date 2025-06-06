@@ -37,8 +37,31 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Store system message for API requests but don't display it
   const systemMessage = getSystemMessage();
 
+  // Function to detect if a query needs real-time data
+  const isRealTimeQuery = (query: string): boolean => {
+    const realTimeKeywords = [
+      'latest', 'recent', 'current', 'today', 'now', 'breaking', 'news',
+      'what happened', 'what\'s happening', 'update', 'this week', 'this month',
+      'this year', 'trending', 'weather', 'stock price', 'currency', 'exchange rate',
+      'covid', 'coronavirus', 'election', 'sports score', 'match result',
+      'who won', 'winner', 'score', 'live', 'real time', 'real-time'
+    ];
+    
+    const lowerQuery = query.toLowerCase();
+    return realTimeKeywords.some(keyword => lowerQuery.includes(keyword));
+  };
+
   const sendUserMessage = useCallback(async (content: string, imageFile?: File | null) => {
     if (!content.trim() && !imageFile) return;
+
+    // Check if this is a real-time query that should be automatically searched
+    const shouldAutoSearch = !imageFile && isRealTimeQuery(content);
+
+    if (shouldAutoSearch) {
+      // Automatically route to search
+      await searchAndRespond(content);
+      return;
+    }
 
     // Process any uploaded image file
     let imageData: string | null = null;
@@ -300,11 +323,30 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
           `Title: ${result.title}\nSnippet: ${result.snippet}\nURL: ${result.link}`
         ).join('\n\n') || 'No search results found.';
 
-        const refinedPrompt = `Based on the following search results for "${searchQuery}", provide a comprehensive and accurate answer:
+        // Check if this is a question about who developed/created the AI
+        const isDeveloperQuery = searchQuery.toLowerCase().includes('who developed') || 
+                                searchQuery.toLowerCase().includes('who created') ||
+                                searchQuery.toLowerCase().includes('who made') ||
+                                searchQuery.toLowerCase().includes('developer') ||
+                                searchQuery.toLowerCase().includes('creator');
+
+        let refinedPrompt;
+        
+        if (isDeveloperQuery && searchQuery.toLowerCase().includes('you')) {
+          refinedPrompt = `I was developed by Infonex and I am running as a search question refiner using the GPT-4o-mini AI model engine. I help provide real-time information by searching the web and refining the results to give you accurate and up-to-date answers.
+
+Based on the following search results for "${searchQuery}":
+
+${searchResults}
+
+Please provide a comprehensive response that includes the above information about my development by Infonex and my role as a search refiner, while also incorporating any relevant information from the search results.`;
+        } else {
+          refinedPrompt = `Based on the following search results for "${searchQuery}", provide a comprehensive and accurate answer:
 
 ${searchResults}
 
 Please synthesize this information and provide a helpful response that directly answers the user's query. Include relevant details and cite sources when appropriate.`;
+        }
 
         // Send to GPT-4o-mini for refinement
         const currentMessages = [
@@ -440,11 +482,30 @@ Please synthesize this information and provide a helpful response that directly 
         `Title: ${result.title}\nSnippet: ${result.snippet}\nURL: ${result.link}`
       ).join('\n\n') || 'No search results found.';
 
-      const refinedPrompt = `Based on the following search results for "${query}", provide a comprehensive and accurate answer:
+      // Check if this is a question about who developed/created the AI
+      const isDeveloperQuery = query.toLowerCase().includes('who developed') || 
+                              query.toLowerCase().includes('who created') ||
+                              query.toLowerCase().includes('who made') ||
+                              query.toLowerCase().includes('developer') ||
+                              query.toLowerCase().includes('creator');
+
+      let refinedPrompt;
+      
+      if (isDeveloperQuery && query.toLowerCase().includes('you')) {
+        refinedPrompt = `I was developed by Infonex and I am running as a search question refiner using the GPT-4o-mini AI model engine. I help provide real-time information by searching the web and refining the results to give you accurate and up-to-date answers.
+
+Based on the following search results for "${query}":
+
+${searchResults}
+
+Please provide a comprehensive response that includes the above information about my development by Infonex and my role as a search refiner, while also incorporating any relevant information from the search results.`;
+      } else {
+        refinedPrompt = `Based on the following search results for "${query}", provide a comprehensive and accurate answer:
 
 ${searchResults}
 
 Please synthesize this information and provide a helpful response that directly answers the user's query. Include relevant details and cite sources when appropriate.`;
+      }
 
       // Send to GPT-4o-mini for refinement
       const currentMessages = [
