@@ -162,17 +162,41 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Get all messages up to the user message, including system message for context
       const currentMessages = [systemMessage, ...messagesUpToUserMessage];
 
-      // Extract content from user message
-      const content = typeof userMessage.content === 'string' 
-        ? userMessage.content 
-        : 'Could not retrieve message content';
+      // Extract content from user message and handle multimodal content
+      let textContent = '';
+      let imageData = null;
 
-      // Call the API to regenerate the response
-      const aiResponse = await sendMessage(
-        content,
-        'gpt-4o',
-        currentMessages
-      );
+      if (typeof userMessage.content === 'string') {
+        textContent = userMessage.content;
+      } else if (Array.isArray(userMessage.content)) {
+        // Handle multimodal content
+        const textPart = userMessage.content.find(item => item.type === 'text');
+        const imagePart = userMessage.content.find(item => item.type === 'image');
+
+        textContent = textPart?.text || '';
+        imageData = imagePart?.image_data || null;
+      } else {
+        textContent = 'Could not retrieve message content';
+      }
+
+      let aiResponse;
+
+      if (imageData) {
+        // Use the image-enabled API call with preserved image data
+        aiResponse = await sendMessageWithImage(
+          textContent,
+          imageData,
+          'gpt-4o',
+          currentMessages
+        );
+      } else {
+        // Regular text message
+        aiResponse = await sendMessage(
+          textContent,
+          'gpt-4o',
+          currentMessages
+        );
+      }
 
       // Add the new AI response to the chat
       const newMessage: Message = {
@@ -247,17 +271,41 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Get all messages up to the user message, including system message for context
       const currentMessages = [systemMessage, ...messagesUpToUserMessage];
 
-      // Extract content from user message
-      const content = typeof userMessage.content === 'string' 
-        ? userMessage.content 
-        : 'Could not retrieve message content';
+      // Extract content from user message and handle multimodal content
+      let textContent = '';
+      let imageData = null;
 
-      // Call the API to regenerate the response
-      const aiResponse = await sendMessage(
-        content,
-        'gpt-4o',
-        currentMessages
-      );
+      if (typeof userMessage.content === 'string') {
+        textContent = userMessage.content;
+      } else if (Array.isArray(userMessage.content)) {
+        // Handle multimodal content
+        const textPart = userMessage.content.find(item => item.type === 'text');
+        const imagePart = userMessage.content.find(item => item.type === 'image');
+
+        textContent = textPart?.text || '';
+        imageData = imagePart?.image_data || null;
+      } else {
+        textContent = 'Could not retrieve message content';
+      }
+
+      let aiResponse;
+
+      if (imageData) {
+        // Use the image-enabled API call with preserved image data
+        aiResponse = await sendMessageWithImage(
+          textContent,
+          imageData,
+          'gpt-4o',
+          currentMessages
+        );
+      } else {
+        // Regular text message
+        aiResponse = await sendMessage(
+          textContent,
+          'gpt-4o',
+          currentMessages
+        );
+      }
 
       // Add the new AI response to the chat
       const newMessage: Message = {

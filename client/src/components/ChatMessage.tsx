@@ -32,15 +32,15 @@ export function ChatMessage({ message }: ChatMessageProps) {
   const isUser = role === 'user';
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
-  
+
   // Skip rendering system messages completely
   if (role === 'system') {
     return null;
   }
-  
+
   // Handle both string and array formats of content
   let contentString: string;
-  
+
   if (typeof content === 'string') {
     contentString = content;
   } else if (Array.isArray(content)) {
@@ -58,7 +58,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
   } else {
     contentString = 'Content could not be displayed';
   }
-  
+
   // Split content into text, code blocks, and math blocks
   const contentParts = extractCodeBlocks(contentString);
 
@@ -68,16 +68,16 @@ export function ChatMessage({ message }: ChatMessageProps) {
       .filter(part => !part.isCode)
       .map(part => part.text)
       .join('\n');
-    
+
     navigator.clipboard.writeText(textContent);
     setCopied(true);
-    
+
     toast({
       title: "Copied to clipboard",
       description: "Message content has been copied",
       duration: 2000,
     });
-    
+
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -88,7 +88,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
       .filter(part => !part.isCode && !part.isMath && !part.isInlineMath)
       .map(part => part.text)
       .join(' ');
-    
+
     // Clean up text for better speech synthesis
     return textContent
       // Replace common emoji patterns with spaces to prevent reading emoji codes
@@ -102,12 +102,12 @@ export function ChatMessage({ message }: ChatMessageProps) {
 
   // Get all we need from context at component level
   const { messages, regenerateResponseAtIndex } = useChat();
-  
+
   // Handle regenerate response click
   const regenerateResponse = () => {
     // Only allow regenerating if this is an assistant message
     if (role !== 'assistant') return;
-    
+
     // Find this message's index in the context messages
     const currentIndex = messages.findIndex(m => 
       m.timestamp === message.timestamp && 
@@ -115,7 +115,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
       (typeof m.content === 'string' && typeof content === 'string' ? 
         m.content === content : JSON.stringify(m.content) === JSON.stringify(content))
     );
-    
+
     if (currentIndex <= 0) {
       toast({
         title: "Error",
@@ -125,7 +125,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
       });
       return;
     }
-    
+
     // Look for the most recent user message before this assistant message
     let userMessageIndex = -1;
     for (let i = currentIndex - 1; i >= 0; i--) {
@@ -134,7 +134,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
         break;
       }
     }
-    
+
     if (userMessageIndex === -1) {
       toast({
         title: "Error",
@@ -144,10 +144,10 @@ export function ChatMessage({ message }: ChatMessageProps) {
       });
       return;
     }
-    
+
     // Call the regenerate function with the found index
     regenerateResponseAtIndex(userMessageIndex);
-    
+
     toast({
       title: "Regenerating response",
       description: "Please wait while we get a new response",
@@ -171,7 +171,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
           <img src={logoImage} alt="Infonex Logo" className="w-full h-full object-cover" />
         </div>
       )}
-      
+
       <div className={`flex flex-col ${isUser 
         ? 'bg-muted rounded-2xl accent-border p-4 max-w-[85%] shadow-md' 
         : 'bg-neutral-950 dark:bg-neutral-950 rounded-2xl p-4 max-w-[85%] shadow-md border border-neutral-800'}`}
@@ -197,7 +197,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
             }
           })}
         </div>
-        
+
         {!isUser && (
           <div className="flex mt-3 pt-2 border-t border-neutral-800">
             <div className="flex space-x-1">
@@ -218,7 +218,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-              
+
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -236,7 +236,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-              
+
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -254,10 +254,10 @@ export function ChatMessage({ message }: ChatMessageProps) {
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-              
+
               {/* Text to Speech component */}
               <TextToSpeech text={getCleanTextForSpeech()} />
-              
+
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -279,7 +279,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
           </div>
         )}
       </div>
-      
+
       {isUser && (
         <div className="bg-muted rounded-full w-8 h-8 flex items-center justify-center text-muted-foreground flex-shrink-0 mt-1">
           <User className="h-4 w-4" />
