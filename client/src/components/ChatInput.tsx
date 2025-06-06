@@ -16,6 +16,7 @@ export function ChatInput() {
   const [input, setInput] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageName, setImageName] = useState<string>('');
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -132,7 +133,7 @@ export function ChatInput() {
     }
   };
   
-  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     
     if (files && files.length > 0) {
@@ -149,31 +150,49 @@ export function ChatInput() {
         return;
       }
       
-      // Check file size (limit to 5MB)
-      if (file.size > 5 * 1024 * 1024) {
+      // Check file size (limit to 8MB)
+      if (file.size > 8 * 1024 * 1024) {
         toast({
           title: "Error",
-          description: "Image file is too large (maximum: 5MB)",
+          description: "Image file is too large (maximum: 8MB)",
           variant: "destructive",
           duration: 3000,
         });
         return;
       }
       
-      setImageFile(file);
+      setIsUploadingImage(true);
       setImageName(file.name);
       
-      toast({
-        title: "Image added",
-        description: `Image "${file.name}" added to your message`,
-        duration: 2000,
-      });
+      try {
+        // Simulate processing time for better UX
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        setImageFile(file);
+        setIsUploadingImage(false);
+        
+        toast({
+          title: "Image ready",
+          description: `Image "${file.name}" is ready to send`,
+          duration: 2000,
+        });
+      } catch (error) {
+        setIsUploadingImage(false);
+        setImageName('');
+        toast({
+          title: "Error",
+          description: "Failed to process image. Please try again.",
+          variant: "destructive",
+          duration: 3000,
+        });
+      }
     }
   };
   
   const removeImage = () => {
     setImageFile(null);
     setImageName('');
+    setIsUploadingImage(false);
     
     // Reset file input
     if (fileInputRef.current) {
@@ -195,24 +214,30 @@ export function ChatInput() {
             className="hidden"
           />
           
-          {/* Image preview (if uploaded) */}
-          {imageFile && (
+          {/* Image preview (if uploaded or uploading) */}
+          {(imageFile || isUploadingImage) && (
             <div className="mb-2 flex items-center">
               <Badge 
                 variant="outline" 
-                className="bg-neutral-800 text-white border-neutral-700 py-1 pl-2 pr-1 flex items-center gap-1"
+                className={`bg-neutral-800 text-white border-neutral-700 py-1 pl-2 pr-1 flex items-center gap-1 ${
+                  isUploadingImage ? 'opacity-75' : ''
+                }`}
               >
-                <Image className="h-3 w-3 mr-1" />
-                <span className="truncate max-w-[150px]">{imageName}</span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={removeImage}
-                  className="h-4 w-4 rounded-full hover:bg-neutral-700 p-0 ml-1"
-                >
-                  <X className="h-3 w-3" />
-                </Button>
+                <Image className={`h-3 w-3 mr-1 ${isUploadingImage ? 'animate-pulse' : ''}`} />
+                <span className="truncate max-w-[150px]">
+                  {isUploadingImage ? `Processing ${imageName}...` : imageName}
+                </span>
+                {!isUploadingImage && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={removeImage}
+                    className="h-4 w-4 rounded-full hover:bg-neutral-700 p-0 ml-1"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                )}
               </Badge>
             </div>
           )}
@@ -227,11 +252,12 @@ export function ChatInput() {
                       variant="ghost"
                       size="icon"
                       onClick={handleImageClick}
+                      disabled={isUploadingImage}
                       className={`h-9 w-9 rounded-full hover:bg-neutral-700 ${
                         imageFile ? 'text-primary hover:text-primary' : 'text-neutral-400 hover:text-white'
-                      }`}
+                      } ${isUploadingImage ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
-                      <ImagePlus className="h-5 w-5" />
+                      <ImagePlus className={`h-5 w-5 ${isUploadingImage ? 'animate-pulse' : ''}`} />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="top">
@@ -247,9 +273,15 @@ export function ChatInput() {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               rows={1}
-              placeholder={imageFile ? "Ask about this image..." : "Ask anything..."}
+              placeholder={
+                isUploadingImage 
+                  ? "Processing image..." 
+                  : imageFile 
+                    ? "Ask about this image..." 
+                    : "Ask anything..."
+              }
               className="flex-1 py-3 px-3 bg-transparent border-none focus:outline-none focus:ring-0 resize-none text-white placeholder-neutral-500 min-h-[44px] max-h-[200px]"
-              disabled={isLoading}
+              disabled={isLoading || isUploadingImage}
             />
             
             <div className="flex items-center pr-2 space-x-1">
@@ -276,7 +308,7 @@ export function ChatInput() {
               
               <Button
                 type="submit"
-                disabled={isLoading || (!input.trim() && !imageFile)}
+                disabled={isLoading || isUploadingImage || (!input.trim() && !imageFile)}
                 className="h-9 w-9 rounded-full bg-primary hover:bg-primary/90 text-white shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
               >
                 <Send className="h-5 w-5" />

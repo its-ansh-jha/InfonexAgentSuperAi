@@ -70,7 +70,7 @@ const textContentSchema = z.object({
 
 // Request schema for chat completions
 export const chatCompletionRequestSchema = z.object({
-  model: z.enum(["gpt-4o-mini", "deepseek-r1", "llama-4-maverick"]),
+  model: z.enum(["gpt-4o", "gpt-4o-mini", "deepseek-r1", "llama-4-maverick"]),
   messages: z.array(
     z.object({
       role: z.enum(["user", "assistant", "system"]),
