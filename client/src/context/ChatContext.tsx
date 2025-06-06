@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext, useCallback, useEffect } from 'react';
 import { Message } from '@/types';
-import { sendMessage, sendMessageWithImage, uploadImage } from '@/utils/api';
+import { sendMessage, sendMessageWithImage, sendReasoningMessage } from '@/utils/api';
 import { getSystemMessage } from '@/utils/helpers';
 import { useToast } from '@/hooks/use-toast';
 import { useChatHistory } from '@/context/ChatHistoryContext';
@@ -47,7 +47,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       'covid', 'coronavirus', 'election', 'sports score', 'match result',
       'who won', 'winner', 'score', 'live', 'real time', 'real-time'
     ];
-    
+
     const lowerQuery = query.toLowerCase();
     return realTimeKeywords.some(keyword => lowerQuery.includes(keyword));
   };
@@ -333,7 +333,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
                                 searchQuery.toLowerCase().includes('creator');
 
         let refinedPrompt;
-        
+
         if (isDeveloperQuery && searchQuery.toLowerCase().includes('you')) {
           refinedPrompt = `I was developed by Infonex and I am running as a search question refiner using the GPT-4o-mini AI model engine. I help provide real-time information by searching the web and refining the results to give you accurate and up-to-date answers.
 
@@ -392,7 +392,7 @@ Please synthesize this information and provide a helpful response that directly 
                             reasoningQuery.toLowerCase().includes('engine');
 
         let reasoningPrompt;
-        
+
         if (isModelQuery && (reasoningQuery.toLowerCase().includes('you') || reasoningQuery.toLowerCase().includes('running'))) {
           reasoningPrompt = `I am using the o4 reasoning model AI engine to answer this question. This advanced reasoning model is designed to provide deep, thoughtful analysis and step-by-step logical reasoning for complex problems.
 
@@ -414,10 +414,9 @@ Use advanced reasoning to break down the problem, consider multiple perspectives
           { role: 'user', content: reasoningPrompt }
         ];
 
-        const aiResponse = await sendMessage(
-          reasoningPrompt,
-          'deepseek-r1',
-          currentMessages
+        const aiResponse = await sendReasoningMessage(
+          currentMessages,
+          currentSessionId
         );
 
         // Add the reasoning AI response to the chat
@@ -531,7 +530,7 @@ Use advanced reasoning to break down the problem, consider multiple perspectives
                           query.toLowerCase().includes('engine');
 
       let reasoningPrompt;
-      
+
       if (isModelQuery && (query.toLowerCase().includes('you') || query.toLowerCase().includes('running'))) {
         reasoningPrompt = `I am using the o4 reasoning model AI engine to answer this question. This advanced reasoning model is designed to provide deep, thoughtful analysis and step-by-step logical reasoning for complex problems.
 
@@ -553,10 +552,9 @@ Use advanced reasoning to break down the problem, consider multiple perspectives
         { role: 'user', content: reasoningPrompt }
       ];
 
-      const aiResponse = await sendMessage(
-        reasoningPrompt,
-        'deepseek-r1',
-        currentMessages
+      const aiResponse = await sendReasoningMessage(
+        currentMessages,
+        currentSessionId
       );
 
       // Add the reasoning AI response to the chat
@@ -644,7 +642,7 @@ Use advanced reasoning to break down the problem, consider multiple perspectives
                               query.toLowerCase().includes('creator');
 
       let refinedPrompt;
-      
+
       if (isDeveloperQuery && query.toLowerCase().includes('you')) {
         refinedPrompt = `I was developed by Infonex and I am running as a search question refiner using the GPT-4o-mini AI model engine. I help provide real-time information by searching the web and refining the results to give you accurate and up-to-date answers.
 
