@@ -275,7 +275,25 @@ export function ChatInput() {
           {/* Integrated text input and buttons container */}
           <div className="relative bg-neutral-800 rounded-xl border border-neutral-700 overflow-hidden">
             <div className="flex items-end">
-              {/* Left side buttons */}
+              {/* Text input area */}
+              <div className="flex-1">
+                <textarea
+                  ref={textareaRef}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  rows={1}
+                  placeholder={
+                    isUploadingImage 
+                      ? "Processing image..." 
+                      : "Ask anything"
+                  }
+                  className="w-full py-4 px-4 bg-transparent border-none focus:outline-none focus:ring-0 resize-none text-white placeholder-neutral-500 min-h-[52px] max-h-[200px]"
+                  disabled={isLoading || isUploadingImage}
+                />
+              </div>
+
+              {/* Action buttons */}
               <div className="flex items-center space-x-2 px-3 pb-3">
                 <TooltipProvider>
                   <Tooltip>
@@ -318,28 +336,7 @@ export function ChatInput() {
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
-              </div>
 
-              {/* Text input area */}
-              <div className="flex-1">
-                <textarea
-                  ref={textareaRef}
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  rows={1}
-                  placeholder={
-                    isUploadingImage 
-                      ? "Processing image..." 
-                      : "Ask anything"
-                  }
-                  className="w-full py-4 px-4 bg-transparent border-none focus:outline-none focus:ring-0 resize-none text-white placeholder-neutral-500 min-h-[52px] max-h-[200px]"
-                  disabled={isLoading || isUploadingImage}
-                />
-              </div>
-
-              {/* Right side action buttons */}
-              <div className="flex items-center space-x-2 px-3 pb-3">
                 {!isSearchMode && !isReasoningMode && (
                   <TooltipProvider>
                     <Tooltip>
