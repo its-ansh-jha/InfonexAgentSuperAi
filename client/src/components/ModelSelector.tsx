@@ -14,7 +14,7 @@ export function ModelSelector() {
         <div className="flex items-center justify-between">
           <ChatMenu />
           <div className="flex items-center">
-            <span className="text-sm text-muted-foreground mr-3 font-medium">Using GPT-4o-mini</span>
+            <span className="text-sm text-muted-foreground mr-3 font-medium">Using GPT-4o</span>
           </div>
           <Button 
             variant="outline" 

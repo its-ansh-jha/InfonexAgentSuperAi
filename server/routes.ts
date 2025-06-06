@@ -1,3 +1,4 @@
+import { searchSerper } from './services/serper';
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { z } from "zod";
@@ -13,6 +14,15 @@ import { eq } from "drizzle-orm";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Image upload endpoint
+  app.post('/api/search', async (req, res) => {
+  try {
+    const { query } = req.body;
+    const data = await searchSerper(query);
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
   app.post("/api/upload-image", async (req, res) => {
     try {
       await handleImageUpload(req, res);
