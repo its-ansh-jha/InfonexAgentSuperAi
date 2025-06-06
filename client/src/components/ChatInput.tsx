@@ -316,7 +316,7 @@ export function ChatInput() {
                   ? "Processing image..." 
                   : isSearchMode
                     ? "Search for realtime information..."
-                    : "Type your message... (Real-time queries will auto-search)"
+                    : "Ask Anything..."
               }
               className="flex-1 py-3 px-3 bg-transparent border-none focus:outline-none focus:ring-0 resize-none text-white placeholder-neutral-500 min-h-[44px] max-h-[200px]"
               disabled={isLoading || isUploadingImage}
