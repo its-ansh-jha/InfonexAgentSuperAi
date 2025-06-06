@@ -5,16 +5,9 @@ export function formatTimestamp(timestamp: string): string {
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-export function autoResizeTextarea(textarea: HTMLTextAreaElement) {
-  // Reset height to auto to get the correct scrollHeight
-  textarea.style.height = 'auto';
-
-  // Calculate the new height based on content
-  const newHeight = Math.min(textarea.scrollHeight, 200); // Max height of 200px
-  const minHeight = 52; // Min height to match the design
-
-  // Set the height to the calculated value, but never less than min height
-  textarea.style.height = Math.max(newHeight, minHeight) + 'px';
+export function autoResizeTextarea(element: HTMLTextAreaElement): void {
+  element.style.height = 'auto';
+  element.style.height = `${element.scrollHeight}px`;
 }
 
 export const getSystemMessage = (): Message => ({
@@ -45,11 +38,11 @@ export function extractCodeBlocks(content: string): { text: string, isCode: bool
   const blockMathRegex = /\\\[([\s\S]*?)\\\]/g;
   const inlineMathRegex = /\\\(([\s\S]*?)\\\)/g;
   const parts: { text: string, isCode: boolean, isMath?: boolean, isInlineMath?: boolean, language?: string }[] = [];
-
+  
   // First, split by code blocks
   let lastIndex = 0;
   let match;
-
+  
   while ((match = codeBlockRegex.exec(content)) !== null) {
     // Add text before the code block
     if (match.index > lastIndex) {
@@ -58,7 +51,7 @@ export function extractCodeBlocks(content: string): { text: string, isCode: bool
         isCode: false
       });
     }
-
+    
     // Add the code block
     const language = match[1] || '';
     parts.push({
@@ -66,10 +59,10 @@ export function extractCodeBlocks(content: string): { text: string, isCode: bool
       isCode: true,
       language
     });
-
+    
     lastIndex = match.index + match[0].length;
   }
-
+  
   // Add remaining text after the last code block
   if (lastIndex < content.length) {
     parts.push({
@@ -80,19 +73,19 @@ export function extractCodeBlocks(content: string): { text: string, isCode: bool
 
   // Now process math blocks in non-code parts
   const result: typeof parts = [];
-
+  
   for (const part of parts) {
     if (part.isCode) {
       result.push(part);
       continue;
     }
-
+    
     // First process block math \[...\]
     const text = part.text;
     let blockMathLastIndex = 0;
     let blockMathParts: typeof parts = [];
     let blockMathMatch;
-
+    
     while ((blockMathMatch = blockMathRegex.exec(text)) !== null) {
       // Add text before the math block
       if (blockMathMatch.index > blockMathLastIndex) {
@@ -102,17 +95,17 @@ export function extractCodeBlocks(content: string): { text: string, isCode: bool
           isMath: false
         });
       }
-
+      
       // Add the math block
       blockMathParts.push({
         text: blockMathMatch[1],
         isCode: false,
         isMath: true
       });
-
+      
       blockMathLastIndex = blockMathMatch.index + blockMathMatch[0].length;
     }
-
+    
     // Add remaining text after the last block math
     if (blockMathLastIndex < text.length) {
       blockMathParts.push({
@@ -124,18 +117,18 @@ export function extractCodeBlocks(content: string): { text: string, isCode: bool
       // If no block math was found, keep the original text
       blockMathParts = [part];
     }
-
+    
     // Then process inline math \(...\) in each non-math part from the previous step
     for (const blockMathPart of blockMathParts) {
       if (blockMathPart.isMath) {
         result.push(blockMathPart);
         continue;
       }
-
+      
       const inlineText = blockMathPart.text;
       let inlineMathLastIndex = 0;
       let inlineMathMatch;
-
+      
       while ((inlineMathMatch = inlineMathRegex.exec(inlineText)) !== null) {
         // Add text before the inline math
         if (inlineMathMatch.index > inlineMathLastIndex) {
@@ -145,17 +138,17 @@ export function extractCodeBlocks(content: string): { text: string, isCode: bool
             isMath: false
           });
         }
-
+        
         // Add the inline math
         result.push({
           text: inlineMathMatch[1],
           isCode: false,
           isInlineMath: true
         });
-
+        
         inlineMathLastIndex = inlineMathMatch.index + inlineMathMatch[0].length;
       }
-
+      
       // Add remaining text after the last inline math
       if (inlineMathLastIndex < inlineText.length) {
         result.push({
@@ -169,6 +162,6 @@ export function extractCodeBlocks(content: string): { text: string, isCode: bool
       }
     }
   }
-
+  
   return result;
 }

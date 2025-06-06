@@ -272,30 +272,51 @@ export function ChatInput() {
             </div>
           )}
 
-          {/* Integrated text input and buttons container */}
-          <div className="relative bg-neutral-800 rounded-xl border border-neutral-700 overflow-hidden">
-            <div className="flex items-end">
-              {/* Text input area */}
-              <div className="flex-1 min-h-[52px]">
-                <textarea
-                  ref={textareaRef}
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  rows={1}
-                  placeholder={
-                    isUploadingImage 
-                      ? "Processing image..." 
-                      : "Ask anything"
-                  }
-                  className="w-full py-4 px-4 bg-transparent border-none focus:outline-none focus:ring-0 resize-none text-white placeholder-neutral-500 min-h-[52px] max-h-[200px] leading-6"
-                  disabled={isLoading || isUploadingImage}
-                  style={{ height: 'auto' }}
-                />
-              </div>
+          <div className="relative flex items-center bg-neutral-800 rounded-full border border-neutral-700 overflow-hidden">
+            <div className="flex items-center pl-3 space-x-1">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={toggleSearchMode}
+                      className={`h-9 w-9 rounded-full hover:bg-neutral-700 ${
+                        isSearchMode ? 'text-primary hover:text-primary bg-primary/20' : 'text-neutral-400 hover:text-white'
+                      }`}
+                    >
+                      <Search className="h-5 w-5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">
+                    <p>{isSearchMode ? 'Exit search mode' : 'Search realtime data'}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
 
-              {/* Action buttons - Fixed position */}
-              <div className="flex items-end space-x-2 px-3 pb-3 self-end">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={toggleReasoningMode}
+                      className={`h-9 w-9 rounded-full hover:bg-neutral-700 ${
+                        isReasoningMode ? 'text-purple-400 hover:text-purple-400 bg-purple-400/20' : 'text-neutral-400 hover:text-white'
+                      }`}
+                    >
+                      <Brain className="h-5 w-5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">
+                    <p>{isReasoningMode ? 'Exit reasoning mode' : 'Advanced reasoning'}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
+              {!isSearchMode && !isReasoningMode && (
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -303,98 +324,75 @@ export function ChatInput() {
                         type="button"
                         variant="ghost"
                         size="icon"
-                        onClick={toggleSearchMode}
-                        className={`h-8 w-8 rounded-full hover:bg-neutral-700 ${
-                          isSearchMode ? 'text-primary hover:text-primary bg-primary/20' : 'text-neutral-400 hover:text-white'
-                        }`}
+                        onClick={handleImageClick}
+                        disabled={isUploadingImage}
+                        className={`h-9 w-9 rounded-full hover:bg-neutral-700 ${
+                          imageFile ? 'text-primary hover:text-primary' : 'text-neutral-400 hover:text-white'
+                        } ${isUploadingImage ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
-                        <Search className="h-4 w-4" />
+                        <ImagePlus className={`h-5 w-5 ${isUploadingImage ? 'animate-pulse' : ''}`} />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent side="top">
-                      <p>{isSearchMode ? 'Exit search mode' : 'Search realtime data'}</p>
+                      <p>Upload image</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
+              )}
+            </div>
 
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={toggleReasoningMode}
-                        className={`h-8 w-8 rounded-full hover:bg-neutral-700 ${
-                          isReasoningMode ? 'text-purple-400 hover:text-purple-400 bg-purple-400/20' : 'text-neutral-400 hover:text-white'
-                        }`}
-                      >
-                        <Brain className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="top">
-                      <p>{isReasoningMode ? 'Exit reasoning mode' : 'Advanced reasoning'}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+            <textarea
+              ref={textareaRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              rows={1}
+              placeholder={
+                isUploadingImage 
+                  ? "Processing image..." 
+                  : isSearchMode
+                    ? "Search for realtime information..."
+                    : isReasoningMode
+                      ? "Ask a complex question for advanced reasoning..."
+                      : "Type your message... (Real-time queries will auto-search)"
+              }
+              className="flex-1 py-3 px-3 bg-transparent border-none focus:outline-none focus:ring-0 resize-none text-white placeholder-neutral-500 min-h-[44px] max-h-[200px]"
+              disabled={isLoading || isUploadingImage}
+            />
 
-                {!isSearchMode && !isReasoningMode && (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={handleImageClick}
-                          disabled={isUploadingImage}
-                          className={`h-8 w-8 rounded-full hover:bg-neutral-700 ${
-                            imageFile ? 'text-primary hover:text-primary' : 'text-neutral-400 hover:text-white'
-                          } ${isUploadingImage ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        >
-                          <ImagePlus className={`h-4 w-4 ${isUploadingImage ? 'animate-pulse' : ''}`} />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent side="top">
-                        <p>Upload image</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                )}
+            <div className="flex items-center pr-2 space-x-1">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={handleVoiceInput}
+                      className={`h-9 w-9 rounded-full text-neutral-400 hover:text-white hover:bg-neutral-700 ${
+                        isListening ? 'bg-red-500/20 text-red-400 animate-pulse' : ''
+                      }`}
+                    >
+                      <Mic className="h-5 w-5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">
+                    <p>{isListening ? 'Stop recording' : 'Voice input'}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
 
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={handleVoiceInput}
-                        className={`h-8 w-8 rounded-full text-neutral-400 hover:text-white hover:bg-neutral-700 ${
-                          isListening ? 'bg-red-500/20 text-red-400 animate-pulse' : ''
-                        }`}
-                      >
-                        <Mic className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="top">
-                      <p>{isListening ? 'Stop recording' : 'Voice input'}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-
-                <Button
-                  type="submit"
-                  disabled={isLoading || isUploadingImage || (!input.trim() && !imageFile)}
-                  className="h-8 w-8 rounded-full bg-primary hover:bg-primary/90 text-white shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center ml-2"
-                >
-                  <Send className="h-4 w-4" />
-                </Button>
-              </div>
+              <Button
+                type="submit"
+                disabled={isLoading || isUploadingImage || (!input.trim() && !imageFile)}
+                className="h-9 w-9 rounded-full bg-primary hover:bg-primary/90 text-white shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+              >
+                <Send className="h-5 w-5" />
+              </Button>
             </div>
           </div>
 
-          <div className="text-xs text-neutral-500 text-center mt-2">
+          <div className="text-xs text-neutral-500 text-center mt-1">
             {isListening ? (
               <span className="text-red-400">Listening...</span>
             ) : isSearchMode ? (
