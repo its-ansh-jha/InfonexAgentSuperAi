@@ -5,9 +5,14 @@ import { log } from "../vite";
 // Use the latest OpenAI model with vision support
 const MODEL = "gpt-4o";
 
-// Initialize OpenAI client
+// Initialize OpenAI client for GPT-4o
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || '',
+});
+
+// Initialize separate OpenAI client for GPT-4o-mini (for search refinement)
+const openaiMini = new OpenAI({
+  apiKey: process.env.OPENAI_MINI_API_KEY || process.env.OPENAI_API_KEY || '',
 });
 
 /**
@@ -36,13 +41,13 @@ export async function generateOpenAIMiniResponse(
   request: ChatCompletionRequest
 ): Promise<ChatCompletionResponse> {
   try {
-    if (!process.env.OPENAI_API_KEY) {
-      throw new Error("OpenAI API key is not configured.");
+    if (!process.env.OPENAI_MINI_API_KEY && !process.env.OPENAI_API_KEY) {
+      throw new Error("OpenAI Mini API key is not configured.");
     }
 
     log(`Sending request to gpt-4o-mini for search refinement`);
 
-    const response = await openai.chat.completions.create({
+    const response = await openaiMini.chat.completions.create({
       model: "gpt-4o-mini",
       messages: request.messages,
     });

@@ -277,12 +277,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       missingKeys.push("OPENAI_API_KEY");
     }
     
+    if (!process.env.OPENAI_MINI_API_KEY) {
+      missingKeys.push("OPENAI_MINI_API_KEY");
+    }
+    
     if (!process.env.OPENROUTER_API_KEY) {
       missingKeys.push("OPENROUTER_API_KEY");
     }
 
     if (!process.env.DATABASE_URL) {
       missingKeys.push("DATABASE_URL");
+    }
+
+    if (!process.env.SERPER_API_KEY) {
+      missingKeys.push("SERPER_API_KEY");
     }
     
     if (missingKeys.length > 0) {
