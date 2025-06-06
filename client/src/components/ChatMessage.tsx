@@ -103,10 +103,58 @@ export function ChatMessage({ message }: ChatMessageProps) {
   // Get all we need from context at component level
   const { messages, regenerateResponseAtIndex } = useChat();
 
+  // Check if this assistant message was generated from a user message with an image
+  const isImageBasedResponse = () => {
+    if (role !== 'assistant') return false;
+
+    // Find this message's index in the context messages
+    const currentIndex = messages.findIndex(m => 
+      m.timestamp === message.timestamp && 
+      m.role === message.role &&
+      (typeof m.content === 'string' && typeof content === 'string' ? 
+        m.content === content : JSON.stringify(m.content) === JSON.stringify(content))
+    );
+
+    if (currentIndex <= 0) return false;
+
+    // Look for the most recent user message before this assistant message
+    for (let i = currentIndex - 1; i >= 0; i--) {
+      if (messages[i].role === 'user') {
+        const userMessage = messages[i];
+        
+        // Check if user message has image content
+        if (Array.isArray(userMessage.content)) {
+          const hasImage = userMessage.content.some(item => item.type === 'image');
+          if (hasImage) return true;
+        }
+        
+        // Check if user message content indicates an image was attached
+        if (typeof userMessage.content === 'string' && userMessage.content.includes('[Image attached]')) {
+          return true;
+        }
+        
+        break;
+      }
+    }
+
+    return false;
+  };
+
   // Handle regenerate response click
   const regenerateResponse = () => {
     // Only allow regenerating if this is an assistant message
     if (role !== 'assistant') return;
+
+    // Don't allow regenerating responses from image-based questions
+    if (isImageBasedResponse()) {
+      toast({
+        title: "Regenerate not available",
+        description: "Regenerate response is not available for image-based questions",
+        variant: "destructive",
+        duration: 3000,
+      });
+      return;
+    }
 
     // Find this message's index in the context messages
     const currentIndex = messages.findIndex(m => 
@@ -258,23 +306,25 @@ export function ChatMessage({ message }: ChatMessageProps) {
               {/* Text to Speech component */}
               <TextToSpeech text={getCleanTextForSpeech()} />
 
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      onClick={regenerateResponse}
-                      className="h-8 w-8 rounded-full text-neutral-400 hover:text-white hover:bg-neutral-800"
-                    >
-                      <RefreshCw className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">
-                    <p>Regenerate response</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              {!isImageBasedResponse() && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={regenerateResponse}
+                        className="h-8 w-8 rounded-full text-neutral-400 hover:text-white hover:bg-neutral-800"
+                      >
+                        <RefreshCw className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p>Regenerate response</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
             </div>
           </div>
         )}
