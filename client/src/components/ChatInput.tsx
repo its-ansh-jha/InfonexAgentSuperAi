@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect, ChangeEvent } from 'react';
-import { Send, Volume2, ImagePlus, Image, X, Mic, Search } from 'lucide-react';
+import { Send, Volume2, ImagePlus, Image, X, Mic, Search, Brain } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChat } from '@/context/ChatContext';
 import { autoResizeTextarea } from '@/utils/helpers';
@@ -19,9 +19,10 @@ export function ChatInput() {
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [isSearchMode, setIsSearchMode] = useState(false);
+  const [isReasoningMode, setIsReasoningMode] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { sendUserMessage, searchAndRespond, isLoading } = useChat();
+  const { sendUserMessage, searchAndRespond, reasonAndRespond, isLoading } = useChat();
   const { toast } = useToast();
 
   // Auto-resize textarea on input
@@ -40,6 +41,9 @@ export function ChatInput() {
     if (isSearchMode && !imageFile) {
       // Use search mode - search and get AI refined response
       await searchAndRespond(input);
+    } else if (isReasoningMode && !imageFile) {
+      // Use reasoning mode - get AI reasoning response
+      await reasonAndRespond(input);
     } else {
       // Regular chat mode - send the message with optional image
       await sendUserMessage(input, imageFile);
@@ -50,6 +54,7 @@ export function ChatInput() {
     setImageFile(null);
     setImageName('');
     setIsSearchMode(false);
+    setIsReasoningMode(false);
 
     // Reset textarea height
     if (textareaRef.current) {
@@ -209,8 +214,18 @@ export function ChatInput() {
 
   const toggleSearchMode = () => {
     setIsSearchMode(!isSearchMode);
+    setIsReasoningMode(false); // Disable reasoning when enabling search
     if (imageFile) {
       // Clear image when switching to search mode since search doesn't support images
+      removeImage();
+    }
+  };
+
+  const toggleReasoningMode = () => {
+    setIsReasoningMode(!isReasoningMode);
+    setIsSearchMode(false); // Disable search when enabling reasoning
+    if (imageFile) {
+      // Clear image when switching to reasoning mode since reasoning doesn't support images
       removeImage();
     }
   };
@@ -280,7 +295,28 @@ export function ChatInput() {
                 </Tooltip>
               </TooltipProvider>
 
-              {!isSearchMode && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={toggleReasoningMode}
+                      className={`h-9 w-9 rounded-full hover:bg-neutral-700 ${
+                        isReasoningMode ? 'text-purple-400 hover:text-purple-400 bg-purple-400/20' : 'text-neutral-400 hover:text-white'
+                      }`}
+                    >
+                      <Brain className="h-5 w-5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">
+                    <p>{isReasoningMode ? 'Exit reasoning mode' : 'Advanced reasoning'}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
+              {!isSearchMode && !isReasoningMode && (
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -316,7 +352,9 @@ export function ChatInput() {
                   ? "Processing image..." 
                   : isSearchMode
                     ? "Search for realtime information..."
-                    : "Type your message... (Real-time queries will auto-search)"
+                    : isReasoningMode
+                      ? "Ask a complex question for advanced reasoning..."
+                      : "Type your message... (Real-time queries will auto-search)"
               }
               className="flex-1 py-3 px-3 bg-transparent border-none focus:outline-none focus:ring-0 resize-none text-white placeholder-neutral-500 min-h-[44px] max-h-[200px]"
               disabled={isLoading || isUploadingImage}
@@ -359,6 +397,8 @@ export function ChatInput() {
               <span className="text-red-400">Listening...</span>
             ) : isSearchMode ? (
               <span className="text-blue-400">Search mode: Get realtime data refined by GPT-4o-mini</span>
+            ) : isReasoningMode ? (
+              <span className="text-purple-400">Reasoning mode: Advanced reasoning with o4 mini reasoning model</span>
             ) : (
               <span>Infonex is using GPT-4o to generate human-like text and analyze images</span>
             )}

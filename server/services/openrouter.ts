@@ -2,7 +2,7 @@ import { ChatCompletionRequest, ChatCompletionResponse } from "@shared/schema";
 import { log } from "../vite";
 
 const API_URL = "https://openrouter.ai/api/v1/chat/completions";
-const MODEL = "deepseek/deepseek-r1-zero:free";
+const MODEL = "deepseek/deepseek-r1:free";
 
 export async function generateDeepSeekResponse(
   request: ChatCompletionRequest

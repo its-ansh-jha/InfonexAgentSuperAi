@@ -36,10 +36,19 @@ export default function PrivacyPolicy() {
               <li><strong>Contact Data</strong> includes email address and telephone numbers.</li>
               <li><strong>Technical Data</strong> includes internet protocol (IP) address, your login data, browser type and version, time zone setting and location, browser plug-in types and versions, operating system and platform, and other technology on the devices you use to access this website.</li>
               <li><strong>Usage Data</strong> includes information about how you use our website, products, and services.</li>
-              <li><strong>Conversation Data</strong> includes the content of conversations you have with our AI systems.</li>
+              <li><strong>Conversation Data</strong> includes the content of conversations you have with our AI systems, including regular chat, search queries, and reasoning requests.</li>
             </ul>
 
-            <h2 className="text-xl font-semibold">2. How We Use Your Data</h2>
+            <h2 className="text-xl font-semibold">2. AI Models and Services</h2>
+            <p>InfoAgentAI uses multiple AI models to provide different types of responses:</p>
+            <ul className="list-disc ml-6 space-y-1">
+              <li><strong>GPT-4o</strong>: Primary conversational AI with vision capabilities for text and image analysis</li>
+              <li><strong>GPT-4o-mini</strong>: Used for real-time search result refinement and processing</li>
+              <li><strong>o4 mini reasoning model</strong>: Advanced reasoning model for complex problem-solving and step-by-step analysis</li>
+              <li><strong>DeepSeek R1</strong>: Alternative reasoning model for enhanced logical thinking</li>
+            </ul>
+
+            <h2 className="text-xl font-semibold">3. How We Use Your Data</h2>
             <p>We will only use your personal data when the law allows us to. Most commonly, we will use your personal data in the following circumstances:</p>
             <ul className="list-disc ml-6 space-y-1">
               <li>To register you as a new customer.</li>
@@ -49,13 +58,13 @@ export default function PrivacyPolicy() {
               <li>To improve our AI models based on your interactions.</li>
             </ul>
 
-            <h2 className="text-xl font-semibold">3. Data Security</h2>
+            <h2 className="text-xl font-semibold">4. Data Security</h2>
             <p>We have put in place appropriate security measures to prevent your personal data from being accidentally lost, used, or accessed in an unauthorized way, altered, or disclosed. In addition, we limit access to your personal data to those employees, agents, contractors, and other third parties who have a business need to know.</p>
 
-            <h2 className="text-xl font-semibold">4. Data Retention</h2>
+            <h2 className="text-xl font-semibold">5. Data Retention</h2>
             <p>We will only retain your personal data for as long as necessary to fulfill the purposes we collected it for, including for the purposes of satisfying any legal, accounting, or reporting requirements.</p>
 
-            <h2 className="text-xl font-semibold">5. Your Legal Rights</h2>
+            <h2 className="text-xl font-semibold">6. Your Legal Rights</h2>
             <p>Under certain circumstances, you have rights under data protection laws in relation to your personal data, including the right to:</p>
             <ul className="list-disc ml-6 space-y-1">
               <li>Request access to your personal data</li>
@@ -67,10 +76,10 @@ export default function PrivacyPolicy() {
               <li>Right to withdraw consent</li>
             </ul>
 
-            <h2 className="text-xl font-semibold">6. Changes to This Privacy Policy</h2>
+            <h2 className="text-xl font-semibold">7. Changes to This Privacy Policy</h2>
             <p>We may update our privacy policy from time to time. We will notify you of any changes by posting the new privacy policy on this page and updating the "Last Updated" date at the top of this privacy policy.</p>
 
-            <h2 className="text-xl font-semibold">7. Contact Us</h2>
+            <h2 className="text-xl font-semibold">8. Contact Us</h2>
             <p>If you have any questions about this privacy policy or our privacy practices, please contact us at:</p>
             <p>Email: privacy@infoagentai.com</p>
           </div>

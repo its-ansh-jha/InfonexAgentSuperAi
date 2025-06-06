@@ -16,16 +16,16 @@ export type MessageContent = string | (TextData | ImageData)[];
 export async function uploadImage(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    
+
     reader.onload = () => {
       const base64Data = reader.result as string;
       resolve(base64Data);
     };
-    
+
     reader.onerror = () => {
       reject(new Error('Failed to read file'));
     };
-    
+
     reader.readAsDataURL(file);
   });
 }
@@ -38,7 +38,7 @@ export async function sendMessageWithImage(
 ): Promise<Message> {
   try {
     let messageContent: MessageContent;
-    
+
     // If there's an image, create a multimodal message
     if (imageData) {
       messageContent = [
@@ -48,19 +48,19 @@ export async function sendMessageWithImage(
     } else {
       messageContent = content;
     }
-    
+
     // Convert messages for API format
     const apiMessages = messages.map(({ role, content }) => ({ 
       role, 
       content 
     }));
-    
+
     // Add the new message with possibly multimodal content
     const newMessage = {
       role: 'user' as const,
       content: messageContent
     };
-    
+
     // Use the improved apiRequest function
     const data = await apiRequest<{
       message: { role: 'user' | 'assistant' | 'system'; content: string };
@@ -73,7 +73,7 @@ export async function sendMessageWithImage(
         messages: [...apiMessages, newMessage],
       },
     });
-    
+
     return {
       role: data.message.role as 'user' | 'assistant' | 'system',
       content: data.message.content,
@@ -88,29 +88,54 @@ export async function sendMessageWithImage(
 
 export async function sendMessage(
   content: string,
-  model: 'gpt-4o' | 'gpt-4o-mini' | 'llama-4-maverick',
+  model: 'gpt-4o' | 'gpt-4o-mini' | 'llama-4-maverick' | 'deepseek-r1',
   messages: Message[]
 ): Promise<Message> {
   try {
-    // Use the improved apiRequest function
-    const data = await apiRequest<{
-      message: { role: 'user' | 'assistant' | 'system'; content: string };
-      model: string;
-    }>({
-      url: '/api/chat',
-      method: 'POST',
-      data: {
+    // Validate model
+    if (!['gpt-4o', 'gpt-4o-mini', 'deepseek-r1', 'llama-4-maverick'].includes(model)) {
+      throw new Error('Invalid model selection');
+    }
+
+    if (model === 'deepseek-r1') {
+      const data = await apiRequest<{
+        message: { role: 'user' | 'assistant' | 'system'; content: string };
+        model: string;
+      }>({
+        url: '/api/reasoning', // Assuming you have a separate /api/reasoning endpoint
+        method: 'POST',
+        data: {
+          messages: messages.map(({ role, content }) => ({ role, content })),
+        },
+      });
+
+      return {
+        role: data.message.role as 'user' | 'assistant' | 'system',
+        content: data.message.content,
+        model: 'o4 mini reasoning model', // Masking the model name
+        timestamp: new Date().toISOString(),
+      };
+    } else {
+      // Use the improved apiRequest function
+      const data = await apiRequest<{
+        message: { role: 'user' | 'assistant' | 'system'; content: string };
+        model: string;
+      }>({
+        url: '/api/chat',
+        method: 'POST',
+        data: {
+          model: model,
+          messages: messages.map(({ role, content }) => ({ role, content })),
+        },
+      });
+
+      return {
+        role: data.message.role as 'user' | 'assistant' | 'system',
+        content: data.message.content,
         model: model,
-        messages: messages.map(({ role, content }) => ({ role, content })),
-      },
-    });
-    
-    return {
-      role: data.message.role as 'user' | 'assistant' | 'system',
-      content: data.message.content,
-      model: model,
-      timestamp: new Date().toISOString(),
-    };
+        timestamp: new Date().toISOString(),
+      };
+    }
   } catch (error) {
     console.error('Error sending message:', error);
     throw error;
