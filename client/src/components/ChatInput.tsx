@@ -19,10 +19,9 @@ export function ChatInput() {
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [isSearchMode, setIsSearchMode] = useState(false);
-  const [isReasoningMode, setIsReasoningMode] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { sendUserMessage, searchAndRespond, reasonAndRespond, isLoading } = useChat();
+  const { sendUserMessage, searchAndRespond, isLoading } = useChat();
   const { toast } = useToast();
 
   // Auto-resize textarea on input
@@ -41,9 +40,6 @@ export function ChatInput() {
     if (isSearchMode && !imageFile) {
       // Use search mode - search and get AI refined response
       await searchAndRespond(input);
-    } else if (isReasoningMode && !imageFile) {
-      // Use reasoning mode - get AI reasoning response
-      await reasonAndRespond(input);
     } else {
       // Regular chat mode - send the message with optional image
       await sendUserMessage(input, imageFile);
@@ -54,7 +50,6 @@ export function ChatInput() {
     setImageFile(null);
     setImageName('');
     setIsSearchMode(false);
-    setIsReasoningMode(false);
 
     // Reset textarea height
     if (textareaRef.current) {
@@ -214,18 +209,8 @@ export function ChatInput() {
 
   const toggleSearchMode = () => {
     setIsSearchMode(!isSearchMode);
-    setIsReasoningMode(false); // Disable reasoning when enabling search
     if (imageFile) {
       // Clear image when switching to search mode since search doesn't support images
-      removeImage();
-    }
-  };
-
-  const toggleReasoningMode = () => {
-    setIsReasoningMode(!isReasoningMode);
-    setIsSearchMode(false); // Disable search when enabling reasoning
-    if (imageFile) {
-      // Clear image when switching to reasoning mode since reasoning doesn't support images
       removeImage();
     }
   };
@@ -272,41 +257,21 @@ export function ChatInput() {
             </div>
           )}
 
-          {/* Text input area */}
-          <div className="relative bg-neutral-800 rounded-xl border border-neutral-700 overflow-hidden mb-3">
-            <textarea
-              ref={textareaRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              rows={1}
-              placeholder={
-                isUploadingImage 
-                  ? "Processing image..." 
-                  : "Ask anything"
-              }
-              className="w-full py-4 px-4 bg-transparent border-none focus:outline-none focus:ring-0 resize-none text-white placeholder-neutral-500 min-h-[52px] max-h-[200px]"
-              disabled={isLoading || isUploadingImage}
-            />
-          </div>
-
-          {/* Action buttons row */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
+          <div className="relative flex items-center bg-neutral-800 rounded-full border border-neutral-700 overflow-hidden">
+            <div className="flex items-center pl-3 space-x-1">
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
                       type="button"
                       variant="ghost"
-                      size="sm"
+                      size="icon"
                       onClick={toggleSearchMode}
-                      className={`h-9 px-3 rounded-full hover:bg-neutral-700 ${
+                      className={`h-9 w-9 rounded-full hover:bg-neutral-700 ${
                         isSearchMode ? 'text-primary hover:text-primary bg-primary/20' : 'text-neutral-400 hover:text-white'
                       }`}
                     >
-                      <Search className="h-4 w-4 mr-2" />
-                      Search
+                      <Search className="h-5 w-5" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="top">
@@ -315,9 +280,7 @@ export function ChatInput() {
                 </Tooltip>
               </TooltipProvider>
 
-              
-
-              {!isSearchMode && !isReasoningMode && (
+              {!isSearchMode && (
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -340,7 +303,26 @@ export function ChatInput() {
                   </Tooltip>
                 </TooltipProvider>
               )}
+            </div>
 
+            <textarea
+              ref={textareaRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              rows={1}
+              placeholder={
+                isUploadingImage 
+                  ? "Processing image..." 
+                  : isSearchMode
+                    ? "Search for realtime information..."
+                    : "Type your message... (Real-time queries will auto-search)"
+              }
+              className="flex-1 py-3 px-3 bg-transparent border-none focus:outline-none focus:ring-0 resize-none text-white placeholder-neutral-500 min-h-[44px] max-h-[200px]"
+              disabled={isLoading || isUploadingImage}
+            />
+
+            <div className="flex items-center pr-2 space-x-1">
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -361,24 +343,22 @@ export function ChatInput() {
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-            </div>
 
-            <Button
-              type="submit"
-              disabled={isLoading || isUploadingImage || (!input.trim() && !imageFile)}
-              className="h-9 w-9 rounded-full bg-primary hover:bg-primary/90 text-white shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-            >
-              <Send className="h-5 w-5" />
-            </Button>
+              <Button
+                type="submit"
+                disabled={isLoading || isUploadingImage || (!input.trim() && !imageFile)}
+                className="h-9 w-9 rounded-full bg-primary hover:bg-primary/90 text-white shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+              >
+                <Send className="h-5 w-5" />
+              </Button>
+            </div>
           </div>
 
-          <div className="text-xs text-neutral-500 text-center mt-2">
+          <div className="text-xs text-neutral-500 text-center mt-1">
             {isListening ? (
               <span className="text-red-400">Listening...</span>
             ) : isSearchMode ? (
               <span className="text-blue-400">Search mode: Get realtime data refined by GPT-4o-mini</span>
-            ) : isReasoningMode ? (
-              <span className="text-purple-400">Reasoning mode: Advanced reasoning with o4 mini reasoning model</span>
             ) : (
               <span>Infonex is using GPT-4o to generate human-like text and analyze images</span>
             )}

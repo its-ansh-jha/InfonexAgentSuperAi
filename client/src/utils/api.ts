@@ -16,16 +16,16 @@ export type MessageContent = string | (TextData | ImageData)[];
 export async function uploadImage(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-
+    
     reader.onload = () => {
       const base64Data = reader.result as string;
       resolve(base64Data);
     };
-
+    
     reader.onerror = () => {
       reject(new Error('Failed to read file'));
     };
-
+    
     reader.readAsDataURL(file);
   });
 }
@@ -38,7 +38,7 @@ export async function sendMessageWithImage(
 ): Promise<Message> {
   try {
     let messageContent: MessageContent;
-
+    
     // If there's an image, create a multimodal message
     if (imageData) {
       messageContent = [
@@ -48,19 +48,19 @@ export async function sendMessageWithImage(
     } else {
       messageContent = content;
     }
-
+    
     // Convert messages for API format
     const apiMessages = messages.map(({ role, content }) => ({ 
       role, 
       content 
     }));
-
+    
     // Add the new message with possibly multimodal content
     const newMessage = {
       role: 'user' as const,
       content: messageContent
     };
-
+    
     // Use the improved apiRequest function
     const data = await apiRequest<{
       message: { role: 'user' | 'assistant' | 'system'; content: string };
@@ -73,7 +73,7 @@ export async function sendMessageWithImage(
         messages: [...apiMessages, newMessage],
       },
     });
-
+    
     return {
       role: data.message.role as 'user' | 'assistant' | 'system',
       content: data.message.content,
@@ -92,11 +92,6 @@ export async function sendMessage(
   messages: Message[]
 ): Promise<Message> {
   try {
-    // Validate model
-    if (!['gpt-4o', 'gpt-4o-mini', 'llama-4-maverick'].includes(model)) {
-      throw new Error('Invalid model selection');
-    }
-
     // Use the improved apiRequest function
     const data = await apiRequest<{
       message: { role: 'user' | 'assistant' | 'system'; content: string };
@@ -109,7 +104,7 @@ export async function sendMessage(
         messages: messages.map(({ role, content }) => ({ role, content })),
       },
     });
-
+    
     return {
       role: data.message.role as 'user' | 'assistant' | 'system',
       content: data.message.content,

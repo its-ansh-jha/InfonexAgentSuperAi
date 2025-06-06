@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext, useCallback, useEffect } from 'react';
 import { Message } from '@/types';
-import { sendMessage, sendMessageWithImage, sendReasoningMessage } from '@/utils/api';
+import { sendMessage, sendMessageWithImage, uploadImage } from '@/utils/api';
 import { getSystemMessage } from '@/utils/helpers';
 import { useToast } from '@/hooks/use-toast';
 import { useChatHistory } from '@/context/ChatHistoryContext';
@@ -46,7 +46,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       'covid', 'coronavirus', 'election', 'sports score', 'match result',
       'who won', 'winner', 'score', 'live', 'real time', 'real-time'
     ];
-
+    
     const lowerQuery = query.toLowerCase();
     return realTimeKeywords.some(keyword => lowerQuery.includes(keyword));
   };
@@ -331,7 +331,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
                                 searchQuery.toLowerCase().includes('creator');
 
         let refinedPrompt;
-
+        
         if (isDeveloperQuery && searchQuery.toLowerCase().includes('you')) {
           refinedPrompt = `I was developed by Infonex and I am running as a search question refiner using the GPT-4o-mini AI model engine. I help provide real-time information by searching the web and refining the results to give you accurate and up-to-date answers.
 
@@ -444,8 +444,6 @@ Please synthesize this information and provide a helpful response that directly 
     }
   }, [messages, toast, updateCurrentChat, systemMessage, sendMessage, sendMessageWithImage]);
 
-  
-
   // Function to search and get AI refined response
   const searchAndRespond = useCallback(async (query: string) => {
     if (!query.trim() || isLoading) return;
@@ -492,7 +490,7 @@ Please synthesize this information and provide a helpful response that directly 
                               query.toLowerCase().includes('creator');
 
       let refinedPrompt;
-
+      
       if (isDeveloperQuery && query.toLowerCase().includes('you')) {
         refinedPrompt = `I was developed by Infonex and I am running as a search question refiner using the GPT-4o-mini AI model engine. I help provide real-time information by searching the web and refining the results to give you accurate and up-to-date answers.
 

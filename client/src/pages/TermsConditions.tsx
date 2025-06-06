@@ -39,15 +39,7 @@ export default function TermsConditions() {
             <p>When you create an account with us, you must provide us with information that is accurate, complete, and current at all times. Failure to do so constitutes a breach of the Terms, which may result in immediate termination of your account on our Service.</p>
             <p>You are responsible for safeguarding the password that you use to access the Service and for any activities or actions under your password.</p>
 
-            <h2 className="text-xl font-semibold">4. AI Services and Models</h2>
-            <p>Our Service provides access to multiple AI models and capabilities:</p>
-            <ul className="list-disc ml-6 space-y-1">
-              <li><strong>Standard Chat</strong>: Powered by GPT-4o for general conversation and image analysis</li>
-              <li><strong>Real-time Search</strong>: Combines web search with GPT-4o-mini for current information</li>
-            </ul>
-            <p>These AI models are provided "as-is" and their responses should be verified for accuracy and appropriateness.</p>
-
-            <h2 className="text-xl font-semibold">5. Content and Conduct</h2>
+            <h2 className="text-xl font-semibold">4. Content and Conduct</h2>
             <p>Our Service allows you to interact with our AI systems. You are responsible for the content of your interactions and any consequences that may result from your submissions.</p>
             <p>You agree not to use the Service to:</p>
             <ul className="list-disc ml-6 space-y-1">
@@ -60,11 +52,11 @@ export default function TermsConditions() {
               <li>Generate content that is harmful, offensive, or otherwise inappropriate</li>
             </ul>
 
-            <h2 className="text-xl font-semibold">6. Termination</h2>
+            <h2 className="text-xl font-semibold">5. Termination</h2>
             <p>We may terminate or suspend your account immediately, without prior notice or liability, for any reason whatsoever, including without limitation if you breach the Terms.</p>
             <p>Upon termination, your right to use the Service will immediately cease. If you wish to terminate your account, you may simply discontinue using the Service.</p>
 
-            <h2 className="text-xl font-semibold">7. Limitation of Liability</h2>
+            <h2 className="text-xl font-semibold">6. Limitation of Liability</h2>
             <p>In no event shall InfoAgentAI, nor its directors, employees, partners, agents, suppliers, or affiliates, be liable for any indirect, incidental, special, consequential or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses, resulting from:</p>
             <ul className="list-disc ml-6 space-y-1">
               <li>Your access to or use of or inability to access or use the Service;</li>
@@ -73,18 +65,18 @@ export default function TermsConditions() {
               <li>Unauthorized access, use, or alteration of your transmissions or content.</li>
             </ul>
 
-            <h2 className="text-xl font-semibold">8. Disclaimer</h2>
+            <h2 className="text-xl font-semibold">7. Disclaimer</h2>
             <p>Your use of the Service is at your sole risk. The Service is provided on an "AS IS" and "AS AVAILABLE" basis. The Service is provided without warranties of any kind, whether express or implied.</p>
-            <p>InfoAgentAI does not warrant that the Service will be uninterrupted, timely, secure, or error-free, or that any errors in the Service will be corrected. AI responses may contain inaccuracies and should be verified independently.</p>
+            <p>InfoAgentAI does not warrant that the Service will be uninterrupted, timely, secure, or error-free, or that any errors in the Service will be corrected.</p>
 
-            <h2 className="text-xl font-semibold">9. Governing Law</h2>
+            <h2 className="text-xl font-semibold">8. Governing Law</h2>
             <p>These Terms shall be governed and construed in accordance with the laws of the United States, without regard to its conflict of law provisions.</p>
 
-            <h2 className="text-xl font-semibold">10. Changes to Terms</h2>
+            <h2 className="text-xl font-semibold">9. Changes to Terms</h2>
             <p>We reserve the right, at our sole discretion, to modify or replace these Terms at any time. We will provide notice of any changes by posting the new Terms on this page and updating the "last updated" date.</p>
             <p>By continuing to access or use our Service after those revisions become effective, you agree to be bound by the revised terms.</p>
 
-            <h2 className="text-xl font-semibold">11. Contact Us</h2>
+            <h2 className="text-xl font-semibold">10. Contact Us</h2>
             <p>If you have any questions about these Terms, please contact us at:</p>
             <p>Email: terms@infoagentai.com</p>
           </div>

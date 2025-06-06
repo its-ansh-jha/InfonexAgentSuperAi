@@ -121,18 +121,18 @@ export function ChatMessage({ message }: ChatMessageProps) {
     for (let i = currentIndex - 1; i >= 0; i--) {
       if (messages[i].role === 'user') {
         const userMessage = messages[i];
-
+        
         // Check if user message has image content
         if (Array.isArray(userMessage.content)) {
           const hasImage = userMessage.content.some(item => item.type === 'image');
           if (hasImage) return true;
         }
-
+        
         // Check if user message content indicates an image was attached
         if (typeof userMessage.content === 'string' && userMessage.content.includes('[Image attached]')) {
           return true;
         }
-
+        
         break;
       }
     }
