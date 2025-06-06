@@ -29,6 +29,57 @@ function buildUserContent(text: string, imageBase64?: string) {
  * This function expects that user messages may have an additional field: imageBase64.
  * If present, it will build the multimodal message accordingly.
  */
+/**
+ * Generate response using GPT-4o-mini specifically for search result refinement
+ */
+export async function generateOpenAIMiniResponse(
+  request: ChatCompletionRequest
+): Promise<ChatCompletionResponse> {
+  try {
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error("OpenAI API key is not configured.");
+    }
+
+    log(`Sending request to gpt-4o-mini for search refinement`);
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: request.messages,
+    });
+
+    if (!response.choices[0].message.content) {
+      throw new Error("OpenAI returned an empty response");
+    }
+
+    return {
+      message: {
+        role: "assistant",
+        content: response.choices[0].message.content,
+      },
+      model: "gpt-4o-mini",
+    };
+  } catch (error: any) {
+    log(`OpenAI Mini API error: ${error.message}`, "error");
+
+    if (error.response) {
+      // If it's an OpenAI API error with a response
+      const status = error.response.status;
+      const errorData = error.response.data || {};
+
+      if (status === 401) {
+        throw new Error("Invalid API key or authentication error");
+      } else if (status === 429) {
+        throw new Error("Rate limit exceeded or quota reached");
+      } else {
+        throw new Error(`OpenAI API error (${status}): ${errorData.error?.message || 'Unknown error'}`);
+      }
+    }
+
+    // For any other error
+    throw new Error(`Error generating response: ${error.message}`);
+  }
+}
+
 export async function generateOpenAIResponse(
   request: ChatCompletionRequest
 ): Promise<ChatCompletionResponse> {

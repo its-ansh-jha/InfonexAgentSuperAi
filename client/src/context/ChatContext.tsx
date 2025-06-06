@@ -7,11 +7,11 @@ import { useChatHistory } from '@/context/ChatHistoryContext';
 
 interface ChatContextType {
   messages: Message[];
-  isLoading: boolean;
   sendUserMessage: (content: string, imageFile?: File | null) => Promise<void>;
+  searchAndRespond: (query: string) => Promise<void>;
+  isLoading: boolean;
   regenerateLastResponse: () => Promise<void>;
-  regenerateResponseAtIndex: (userMessageIndex: number) => Promise<void>;
-  clearMessages: () => void;
+  regenerateResponseAtIndex: (messageIndex: number) => Promise<void>;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -244,23 +244,24 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     startNewChat();
   }, [startNewChat]);
 
-  // Function to regenerate a response for a specific user message by index
-  const regenerateResponseAtIndex = useCallback(async (userMessageIndex: number) => {
-    // Validate the index
-    if (userMessageIndex < 0 || userMessageIndex >= messages.length) {
-      console.error('Invalid user message index:', userMessageIndex);
-      return;
+  const regenerateResponseAtIndex = useCallback(async (messageIndex: number) => {
+    if (messageIndex >= messages.length || messages[messageIndex].role !== 'assistant') return;
+
+    // Find the user message that prompted this assistant response
+    let userMessageIndex = -1;
+    for (let i = messageIndex - 1; i >= 0; i--) {
+      if (messages[i].role === 'user') {
+        userMessageIndex = i;
+        break;
+      }
     }
 
-    // Verify it's a user message
+    if (userMessageIndex === -1) return;
+
     const userMessage = messages[userMessageIndex];
-    if (userMessage.role !== 'user') {
-      console.error('Expected a user message at index:', userMessageIndex);
-      return;
-    }
 
-    // Remove all messages after this user message
-    const messagesUpToUserMessage = messages.slice(0, userMessageIndex + 1);
+    // Remove the assistant message and any subsequent messages
+    const messagesUpToUserMessage = messages.slice(0, messageIndex);
     setMessages(messagesUpToUserMessage);
     updateCurrentChat(messagesUpToUserMessage);
 
@@ -268,24 +269,24 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
 
     try {
-      // Get all messages up to the user message, including system message for context
+      // Get current messages at the time of regeneration
       const currentMessages = [systemMessage, ...messagesUpToUserMessage];
 
-      // Extract content from user message and handle multimodal content
+      // Extract content and image data from user message
       let textContent = '';
-      let imageData = null;
+      let imageData: string | null = null;
 
       if (typeof userMessage.content === 'string') {
         textContent = userMessage.content;
       } else if (Array.isArray(userMessage.content)) {
         // Handle multimodal content
-        const textPart = userMessage.content.find(item => item.type === 'text');
-        const imagePart = userMessage.content.find(item => item.type === 'image');
-
-        textContent = textPart?.text || '';
-        imageData = imagePart?.image_data || null;
-      } else {
-        textContent = 'Could not retrieve message content';
+        for (const item of userMessage.content) {
+          if (item.type === 'text') {
+            textContent = item.text || item.content || '';
+          } else if (item.type === 'image' && item.image_data) {
+            imageData = item.image_data;
+          }
+        }
       }
 
       let aiResponse;
@@ -346,11 +347,108 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [messages, toast, updateCurrentChat, systemMessage]);
 
+  // Function to search and get AI refined response
+  const searchAndRespond = useCallback(async (query: string) => {
+    if (!query.trim() || isLoading) return;
+
+    // Add user's search query to chat
+    const userMessage: Message = {
+      role: 'user',
+      content: `🔍 ${query}`,
+      model: 'search',
+      timestamp: new Date().toISOString(),
+    };
+
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
+    updateCurrentChat(updatedMessages);
+    setIsLoading(true);
+
+    try {
+      // Search using Serper API
+      const searchResponse = await fetch('/api/search', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ query }),
+      });
+
+      if (!searchResponse.ok) {
+        throw new Error('Search failed');
+      }
+
+      const searchData = await searchResponse.json();
+
+      // Create a refined prompt with search results for GPT-4o-mini
+      const searchResults = searchData.organic?.slice(0, 5).map((result: any) => 
+        `Title: ${result.title}\nSnippet: ${result.snippet}\nURL: ${result.link}`
+      ).join('\n\n') || 'No search results found.';
+
+      const refinedPrompt = `Based on the following search results for "${query}", provide a comprehensive and accurate answer:
+
+${searchResults}
+
+Please synthesize this information and provide a helpful response that directly answers the user's query. Include relevant details and cite sources when appropriate.`;
+
+      // Send to GPT-4o-mini for refinement
+      const currentMessages = [
+        systemMessage,
+        ...updatedMessages,
+        { role: 'user', content: refinedPrompt }
+      ];
+
+      const aiResponse = await sendMessage(
+        refinedPrompt,
+        'gpt-4o-mini',
+        currentMessages
+      );
+
+      // Add the refined AI response to the chat
+      const newMessage: Message = {
+        ...aiResponse,
+        timestamp: new Date().toISOString(),
+      };
+
+      const finalMessages = [...updatedMessages, newMessage];
+      setMessages(finalMessages);
+      updateCurrentChat(finalMessages);
+
+      toast({
+        title: 'Search completed',
+        description: 'Found realtime information and generated response',
+        duration: 2000,
+      });
+    } catch (error) {
+      console.error('Failed to search and respond:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to search for information',
+        variant: 'destructive',
+      });
+
+      // Add error message
+      const errorMessage: Message = {
+        role: 'assistant',
+        content: 'I apologize, but I encountered an error while searching for information. Please try again later.',
+        model: 'gpt-4o-mini',
+        timestamp: new Date().toISOString(),
+      };
+
+      const finalMessages = [...updatedMessages, errorMessage];
+      setMessages(finalMessages);
+      updateCurrentChat(finalMessages);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [messages, toast, updateCurrentChat, systemMessage, isLoading]);
+
   return (
     <ChatContext.Provider value={{ 
       messages, 
-      isLoading, 
       sendUserMessage,
+      searchAndRespond,
+      isLoading, 
       regenerateLastResponse,
       regenerateResponseAtIndex,
       clearMessages 

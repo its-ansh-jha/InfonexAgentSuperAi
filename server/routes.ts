@@ -3,7 +3,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { z } from "zod";
 import { chatCompletionRequestSchema, insertMessageSchema, insertChatSessionSchema } from "@shared/schema";
-import { generateOpenAIResponse } from "./services/openai";
+import { generateOpenAIResponse, generateOpenAIMiniResponse } from "./services/openai";
 import { generateDeepSeekResponse } from "./services/openrouter";
 import { generateMaverickResponse, handleImageUpload } from "./services/openrouter-maverick";
 import { handleSearch } from "./services/search";
@@ -13,16 +13,22 @@ import { messages, chatSessions } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Image upload endpoint
+  // Search endpoint for realtime data
   app.post('/api/search', async (req, res) => {
-  try {
-    const { query } = req.body;
-    const data = await searchSerper(query);
-    res.json(data);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+    try {
+      const { query } = req.body;
+      
+      if (!query || typeof query !== 'string') {
+        return res.status(400).json({ error: 'Query is required and must be a string' });
+      }
+      
+      const data = await searchSerper(query);
+      res.json(data);
+    } catch (error: any) {
+      log(`Error in search endpoint: ${error.message}`, "error");
+      res.status(500).json({ error: error.message || 'Search failed' });
+    }
+  });
   app.post("/api/upload-image", async (req, res) => {
     try {
       await handleImageUpload(req, res);
@@ -49,9 +55,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let response;
       
       // Route to appropriate model
-      if (chatRequest.model === "gpt-4o" || chatRequest.model === "gpt-4o-mini") {
+      if (chatRequest.model === "gpt-4o") {
         // Use OpenAI's GPT-4o
         response = await generateOpenAIResponse(chatRequest);
+      } else if (chatRequest.model === "gpt-4o-mini") {
+        // Use OpenAI's GPT-4o-mini (specifically for search refinement)
+        response = await generateOpenAIMiniResponse(chatRequest);
       } else if (chatRequest.model === "deepseek-r1") {
         response = await generateDeepSeekResponse(chatRequest);
       } else if (chatRequest.model === "llama-4-maverick") {

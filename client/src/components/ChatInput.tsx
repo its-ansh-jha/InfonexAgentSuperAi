@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect, ChangeEvent } from 'react';
-import { Send, Volume2, ImagePlus, Image, X, Mic } from 'lucide-react';
+import { Send, Volume2, ImagePlus, Image, X, Mic, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChat } from '@/context/ChatContext';
 import { autoResizeTextarea } from '@/utils/helpers';
@@ -18,9 +18,10 @@ export function ChatInput() {
   const [imageName, setImageName] = useState<string>('');
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [isSearchMode, setIsSearchMode] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { sendUserMessage, isLoading } = useChat();
+  const { sendUserMessage, searchAndRespond, isLoading } = useChat();
   const { toast } = useToast();
 
   // Auto-resize textarea on input
@@ -36,13 +37,19 @@ export function ChatInput() {
     // Must have either text or an image to submit
     if ((!input.trim() && !imageFile) || isLoading) return;
 
-    // Send the message with optional image
-    await sendUserMessage(input, imageFile);
+    if (isSearchMode && !imageFile) {
+      // Use search mode - search and get AI refined response
+      await searchAndRespond(input);
+    } else {
+      // Regular chat mode - send the message with optional image
+      await sendUserMessage(input, imageFile);
+    }
     
     // Reset state
     setInput('');
     setImageFile(null);
     setImageName('');
+    setIsSearchMode(false);
     
     // Reset textarea height
     if (textareaRef.current) {
@@ -200,6 +207,14 @@ export function ChatInput() {
     }
   };
 
+  const toggleSearchMode = () => {
+    setIsSearchMode(!isSearchMode);
+    if (imageFile) {
+      // Clear image when switching to search mode since search doesn't support images
+      removeImage();
+    }
+  };
+
   return (
     <footer className="sticky bottom-0 py-4 bg-neutral-900">
       <div className="container mx-auto px-4">
@@ -251,20 +266,43 @@ export function ChatInput() {
                       type="button"
                       variant="ghost"
                       size="icon"
-                      onClick={handleImageClick}
-                      disabled={isUploadingImage}
+                      onClick={toggleSearchMode}
                       className={`h-9 w-9 rounded-full hover:bg-neutral-700 ${
-                        imageFile ? 'text-primary hover:text-primary' : 'text-neutral-400 hover:text-white'
-                      } ${isUploadingImage ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        isSearchMode ? 'text-primary hover:text-primary bg-primary/20' : 'text-neutral-400 hover:text-white'
+                      }`}
                     >
-                      <ImagePlus className={`h-5 w-5 ${isUploadingImage ? 'animate-pulse' : ''}`} />
+                      <Search className="h-5 w-5" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="top">
-                    <p>Upload image</p>
+                    <p>{isSearchMode ? 'Exit search mode' : 'Search realtime data'}</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
+
+              {!isSearchMode && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={handleImageClick}
+                        disabled={isUploadingImage}
+                        className={`h-9 w-9 rounded-full hover:bg-neutral-700 ${
+                          imageFile ? 'text-primary hover:text-primary' : 'text-neutral-400 hover:text-white'
+                        } ${isUploadingImage ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        <ImagePlus className={`h-5 w-5 ${isUploadingImage ? 'animate-pulse' : ''}`} />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">
+                      <p>Upload image</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
             </div>
             
             <textarea
@@ -276,9 +314,11 @@ export function ChatInput() {
               placeholder={
                 isUploadingImage 
                   ? "Processing image..." 
-                  : imageFile 
-                    ? "Ask about this image..." 
-                    : "Ask anything..."
+                  : isSearchMode
+                    ? "Search for realtime information..."
+                    : imageFile 
+                      ? "Ask about this image..." 
+                      : "Ask anything..."
               }
               className="flex-1 py-3 px-3 bg-transparent border-none focus:outline-none focus:ring-0 resize-none text-white placeholder-neutral-500 min-h-[44px] max-h-[200px]"
               disabled={isLoading || isUploadingImage}
@@ -319,6 +359,8 @@ export function ChatInput() {
           <div className="text-xs text-neutral-500 text-center mt-1">
             {isListening ? (
               <span className="text-red-400">Listening...</span>
+            ) : isSearchMode ? (
+              <span className="text-blue-400">Search mode: Get realtime data refined by GPT-4o-mini</span>
             ) : (
               <span>Infonex is using GPT-4o to generate human-like text and analyze images</span>
             )}
