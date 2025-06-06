@@ -109,12 +109,7 @@ export async function sendMessage(
         },
       });
 
-      return {
-        role: data.message.role as 'user' | 'assistant' | 'system',
-        content: data.message.content,
-        model: 'o4 mini reasoning model', // Masking the model name
-        timestamp: new Date().toISOString(),
-      };
+      
     } else {
       // Use the improved apiRequest function
       const data = await apiRequest<{
@@ -142,23 +137,7 @@ export async function sendMessage(
   }
 }
 
-export async function sendReasoningMessage(messages: Message[], sessionId?: string): Promise<Message> {
-  const response = await fetch('/api/reasoning', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      messages: messages.map(({ timestamp, ...msg }) => msg),
-      model: 'deepseek-r1',
-      sessionId,
-    }),
-  });
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-  }
 
   const data = await response.json();
   return {

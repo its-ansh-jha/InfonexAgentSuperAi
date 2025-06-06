@@ -44,7 +44,6 @@ export default function TermsConditions() {
             <ul className="list-disc ml-6 space-y-1">
               <li><strong>Standard Chat</strong>: Powered by GPT-4o for general conversation and image analysis</li>
               <li><strong>Real-time Search</strong>: Combines web search with GPT-4o-mini for current information</li>
-              <li><strong>Advanced Reasoning</strong>: Uses o4 mini reasoning model for complex problem-solving</li>
             </ul>
             <p>These AI models are provided "as-is" and their responses should be verified for accuracy and appropriateness.</p>
 

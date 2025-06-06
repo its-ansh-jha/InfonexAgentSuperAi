@@ -269,70 +269,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Reasoning endpoint
-  app.post("/api/reasoning", async (req, res) => {
-    try {
-      const validationResult = chatCompletionRequestSchema.safeParse(req.body);
-      
-      if (!validationResult.success) {
-        return res.status(400).json({ 
-          message: "Invalid request format", 
-          errors: validationResult.error.format() 
-        });
-      }
-      
-      const chatRequest = validationResult.data;
-      
-      // Force model to deepseek-r1 for reasoning endpoint
-      chatRequest.model = "deepseek-r1";
-      
-      const response = await generateDeepSeekResponse(chatRequest);
-      
-      log(`Reasoning response generated successfully`);
-      
-      // Store messages in the database if sessionId is provided
-      if (chatRequest.sessionId) {
-        try {
-          // Store the user message
-          const lastUserMessage = chatRequest.messages[chatRequest.messages.length - 1];
-          if (lastUserMessage.role === 'user') {
-            await db.insert(messages).values({
-              role: lastUserMessage.role,
-              content: typeof lastUserMessage.content === 'string' 
-                ? lastUserMessage.content 
-                : JSON.stringify(lastUserMessage.content),
-              model: "deepseek-r1",
-              sessionId: parseInt(chatRequest.sessionId)
-            });
-          }
-          
-          // Store the assistant's response
-          await db.insert(messages).values({
-            role: response.message.role,
-            content: response.message.content,
-            model: response.model,
-            sessionId: parseInt(chatRequest.sessionId)
-          });
-          
-          // Update the chat session's updatedAt timestamp
-          await db
-            .update(chatSessions)
-            .set({ updatedAt: new Date() })
-            .where(eq(chatSessions.id, parseInt(chatRequest.sessionId)));
-        } catch (dbError: any) {
-          log(`Error storing reasoning messages in database: ${dbError.message}`, "error");
-        }
-      }
-      
-      return res.status(200).json(response);
-    } catch (error: any) {
-      log(`Error in reasoning endpoint: ${error.message}`, "error");
-      return res.status(500).json({ 
-        message: "I apologize, but I encountered an error generating a reasoning response. Please try again later.",
-        error: error.message 
-      });
-    }
-  });
+  
 
   // Health check endpoint
   app.get("/api/health", (req, res) => {

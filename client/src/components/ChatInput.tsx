@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect, ChangeEvent } from 'react';
-import { Send, Volume2, ImagePlus, Image, X, Mic, Search, Brain } from 'lucide-react';
+import { Send, Volume2, ImagePlus, Image, X, Mic, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChat } from '@/context/ChatContext';
 import { autoResizeTextarea } from '@/utils/helpers';
@@ -315,27 +315,7 @@ export function ChatInput() {
                 </Tooltip>
               </TooltipProvider>
 
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={toggleReasoningMode}
-                      className={`h-9 px-3 rounded-full hover:bg-neutral-700 ${
-                        isReasoningMode ? 'text-purple-400 hover:text-purple-400 bg-purple-400/20' : 'text-neutral-400 hover:text-white'
-                      }`}
-                    >
-                      <Brain className="h-4 w-4 mr-2" />
-                      Reason
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top">
-                    <p>{isReasoningMode ? 'Exit reasoning mode' : 'Advanced reasoning'}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              
 
               {!isSearchMode && !isReasoningMode && (
                 <TooltipProvider>

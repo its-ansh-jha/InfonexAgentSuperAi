@@ -9,7 +9,6 @@ interface ChatContextType {
   messages: Message[];
   sendUserMessage: (content: string, imageFile?: File | null) => Promise<void>;
   searchAndRespond: (query: string) => Promise<void>;
-  reasonAndRespond: (query: string) => Promise<void>;
   isLoading: boolean;
   regenerateLastResponse: () => Promise<void>;
   regenerateResponseAtIndex: (messageIndex: number) => Promise<void>;
@@ -297,9 +296,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ? userMessage.content 
         : 'Could not retrieve message content';
 
-      // Check if this is a search message or reasoning message
+      // Check if this is a search message
       const isSearchMessage = userMessage.model === 'search' || content.startsWith('🔍');
-      const isReasoningMessage = userMessage.model === 'reasoning' || content.startsWith('🧠');
 
       if (isSearchMessage) {
         // Extract the actual search query (remove 🔍 if present)
@@ -378,62 +376,6 @@ Please synthesize this information and provide a helpful response that directly 
           description: 'A new search response has been generated',
           duration: 2000,
         });
-      } else if (isReasoningMessage) {
-        // Extract the actual reasoning query (remove 🧠 if present)
-        const reasoningQuery = content.startsWith('🧠') ? content.replace('🧠 ', '').trim() : content;
-
-        // Check if this is a question about which model is being used
-        const isModelQuery = reasoningQuery.toLowerCase().includes('which model') || 
-                            reasoningQuery.toLowerCase().includes('what model') ||
-                            reasoningQuery.toLowerCase().includes('which ai') ||
-                            reasoningQuery.toLowerCase().includes('what ai') ||
-                            reasoningQuery.toLowerCase().includes('ai engine') ||
-                            reasoningQuery.toLowerCase().includes('model') ||
-                            reasoningQuery.toLowerCase().includes('engine');
-
-        let reasoningPrompt;
-
-        if (isModelQuery && (reasoningQuery.toLowerCase().includes('you') || reasoningQuery.toLowerCase().includes('running'))) {
-          reasoningPrompt = `I am using the o4 reasoning model AI engine to answer this question. This advanced reasoning model is designed to provide deep, thoughtful analysis and step-by-step logical reasoning for complex problems.
-
-${reasoningQuery}
-
-Please provide a comprehensive response that includes the above information about the o4 reasoning model while also addressing the specific question asked.`;
-        } else {
-          reasoningPrompt = `Please provide a detailed, step-by-step reasoning response to the following question. Think through this carefully and show your reasoning process:
-
-${reasoningQuery}
-
-Use advanced reasoning to break down the problem, consider multiple perspectives, and provide a thorough analysis.`;
-        }
-
-        // Send to DeepSeek R1 for reasoning
-        const currentMessages = [
-          systemMessage,
-          ...messagesUpToUserMessage,
-          { role: 'user', content: reasoningPrompt }
-        ];
-
-        const aiResponse = await sendReasoningMessage(
-          currentMessages,
-          currentSessionId
-        );
-
-        // Add the reasoning AI response to the chat
-        const newMessage: Message = {
-          ...aiResponse,
-          timestamp: new Date().toISOString(),
-        };
-
-        const finalMessages = [...messagesUpToUserMessage, newMessage];
-        setMessages(finalMessages);
-        updateCurrentChat(finalMessages);
-
-        toast({
-          title: 'Reasoning response regenerated',
-          description: 'A new reasoning response has been generated',
-          duration: 2000,
-        });
       } else {
         // Handle regular (non-search) messages
         // Get all messages up to the user message, including system message for context
@@ -502,99 +444,7 @@ Use advanced reasoning to break down the problem, consider multiple perspectives
     }
   }, [messages, toast, updateCurrentChat, systemMessage, sendMessage, sendMessageWithImage]);
 
-  // Function to get reasoning response using o4 reasoning model
-  const reasonAndRespond = useCallback(async (query: string) => {
-    if (!query.trim() || isLoading) return;
-
-    // Add user's reasoning query to chat
-    const userMessage: Message = {
-      role: 'user',
-      content: `🧠 ${query}`,
-      model: 'reasoning',
-      timestamp: new Date().toISOString(),
-    };
-
-    const updatedMessages = [...messages, userMessage];
-    setMessages(updatedMessages);
-    updateCurrentChat(updatedMessages);
-    setIsLoading(true);
-
-    try {
-      // Check if this is a question about which model is being used
-      const isModelQuery = query.toLowerCase().includes('which model') || 
-                          query.toLowerCase().includes('what model') ||
-                          query.toLowerCase().includes('which ai') ||
-                          query.toLowerCase().includes('what ai') ||
-                          query.toLowerCase().includes('ai engine') ||
-                          query.toLowerCase().includes('model') ||
-                          query.toLowerCase().includes('engine');
-
-      let reasoningPrompt;
-
-      if (isModelQuery && (query.toLowerCase().includes('you') || query.toLowerCase().includes('running'))) {
-        reasoningPrompt = `I am using the o4 reasoning model AI engine to answer this question. This advanced reasoning model is designed to provide deep, thoughtful analysis and step-by-step logical reasoning for complex problems.
-
-${query}
-
-Please provide a comprehensive response that includes the above information about the o4 reasoning model while also addressing the specific question asked.`;
-      } else {
-        reasoningPrompt = `Please provide a detailed, step-by-step reasoning response to the following question. Think through this carefully and show your reasoning process:
-
-${query}
-
-Use advanced reasoning to break down the problem, consider multiple perspectives, and provide a thorough analysis.`;
-      }
-
-      // Send to DeepSeek R1 for reasoning
-      const currentMessages = [
-        systemMessage,
-        ...updatedMessages,
-        { role: 'user', content: reasoningPrompt }
-      ];
-
-      const aiResponse = await sendReasoningMessage(
-        currentMessages,
-        currentSessionId
-      );
-
-      // Add the reasoning AI response to the chat
-      const newMessage: Message = {
-        ...aiResponse,
-        timestamp: new Date().toISOString(),
-      };
-
-      const finalMessages = [...updatedMessages, newMessage];
-      setMessages(finalMessages);
-      updateCurrentChat(finalMessages);
-
-      toast({
-        title: 'Reasoning completed',
-        description: 'Advanced reasoning response generated',
-        duration: 2000,
-      });
-    } catch (error) {
-      console.error('Failed to get reasoning response:', error);
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to get reasoning response',
-        variant: 'destructive',
-      });
-
-      // Add error message
-      const errorMessage: Message = {
-        role: 'assistant',
-        content: 'I apologize, but I encountered an error while processing your reasoning request. Please try again later.',
-        model: 'deepseek-r1',
-        timestamp: new Date().toISOString(),
-      };
-
-      const finalMessages = [...updatedMessages, errorMessage];
-      setMessages(finalMessages);
-      updateCurrentChat(finalMessages);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [messages, toast, updateCurrentChat, systemMessage, isLoading]);
+  
 
   // Function to search and get AI refined response
   const searchAndRespond = useCallback(async (query: string) => {
@@ -716,7 +566,6 @@ Please synthesize this information and provide a helpful response that directly 
       messages, 
       sendUserMessage,
       searchAndRespond,
-      reasonAndRespond,
       isLoading, 
       regenerateLastResponse,
       regenerateResponseAtIndex,

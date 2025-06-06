@@ -44,8 +44,6 @@ export default function PrivacyPolicy() {
             <ul className="list-disc ml-6 space-y-1">
               <li><strong>GPT-4o</strong>: Primary conversational AI with vision capabilities for text and image analysis</li>
               <li><strong>GPT-4o-mini</strong>: Used for real-time search result refinement and processing</li>
-              <li><strong>o4 mini reasoning model</strong>: Advanced reasoning model for complex problem-solving and step-by-step analysis</li>
-              <li><strong>DeepSeek R1</strong>: Alternative reasoning model for enhanced logical thinking</li>
             </ul>
 
             <h2 className="text-xl font-semibold">3. How We Use Your Data</h2>
