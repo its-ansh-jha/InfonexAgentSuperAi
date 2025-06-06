@@ -3,7 +3,7 @@ import { ChatCompletionRequest, ChatCompletionResponse } from "@shared/schema";
 import { log } from "../vite";
 
 // Use the latest OpenAI model with vision support
-const MODEL = "gpt-4o-mini";
+const MODEL = "gpt-4o";
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -39,25 +39,35 @@ export async function generateOpenAIResponse(
 
     log(`Sending request to ${MODEL}`);
 
-    // Look for a user message with imageBase64 field.
+    // Look for a user message with imageBase64 field or multimodal content.
     // If found, convert .content into the multimodal array.
     const messages = request.messages.map((msg) => {
-      if (
-        msg.role === "user" &&
-        typeof msg === "object" &&
-        "imageBase64" in msg &&
-        (msg as any).imageBase64
-      ) {
-        const imageBase64 = (msg as any).imageBase64;
-        // Remove imageBase64 after extracting to avoid sending extra fields to OpenAI.
-        const { imageBase64: _, ...rest } = msg as any;
-        return {
-          ...rest,
-          content: buildUserContent(
-            typeof msg.content === "string" ? msg.content : "",
-            imageBase64
-          ),
-        };
+      if (msg.role === "user") {
+        // Handle imageBase64 field (legacy support)
+        if (typeof msg === "object" && "imageBase64" in msg && (msg as any).imageBase64) {
+          const imageBase64 = (msg as any).imageBase64;
+          const { imageBase64: _, ...rest } = msg as any;
+          return {
+            ...rest,
+            content: buildUserContent(
+              typeof msg.content === "string" ? msg.content : "",
+              imageBase64
+            ),
+          };
+        }
+        
+        // Handle multimodal content array
+        if (Array.isArray(msg.content)) {
+          const contentArray = msg.content.map((item: any) => {
+            if (item.type === "text") {
+              return { type: "text", text: item.text || item.content || "" };
+            } else if (item.type === "image" && item.image_data) {
+              return { type: "image_url", image_url: { url: item.image_data } };
+            }
+            return item;
+          });
+          return { ...msg, content: contentArray };
+        }
       }
       return msg;
     });

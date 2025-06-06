@@ -49,8 +49,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let response;
       
       // Route to appropriate model
-      if (chatRequest.model === "gpt-4o-mini") {
-        // Use OpenAI's GPT-4o-mini
+      if (chatRequest.model === "gpt-4o" || chatRequest.model === "gpt-4o-mini") {
+        // Use OpenAI's GPT-4o
         response = await generateOpenAIResponse(chatRequest);
       } else if (chatRequest.model === "deepseek-r1") {
         response = await generateDeepSeekResponse(chatRequest);

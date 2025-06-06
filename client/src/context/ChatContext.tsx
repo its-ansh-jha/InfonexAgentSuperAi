@@ -20,7 +20,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  
+
   // Get current chat from ChatHistoryContext
   const { currentChat, updateCurrentChat, startNewChat } = useChatHistory();
 
@@ -60,7 +60,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Create the message content based on whether there's an image
     let messageContent: string | Array<{type: string, text?: string, image_data?: string}> = content;
-    
+
     if (imageFile && imageData) {
       // Store a text representation in the UI for the user's message
       messageContent = `[Image attached] ${content}`;
@@ -69,7 +69,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const userMessage: Message = {
       role: 'user',
       content: messageContent,
-      model: 'gpt-4o-mini',
+      model: 'gpt-4o',
       timestamp: new Date().toISOString(),
     };
 
@@ -77,39 +77,39 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const updatedMessages = [...messages, userMessage];
     setMessages(updatedMessages);
     updateCurrentChat(updatedMessages);
-    
+
     // Show loading state
     setIsLoading(true);
 
     try {
       // Get current messages at the time of sending, including system message for AI context
       const currentMessages = [systemMessage, ...messages, userMessage];
-      
+
       let aiResponse;
-      
+
       if (imageFile && imageData) {
         // Use the image-enabled API call
         aiResponse = await sendMessageWithImage(
           content, 
           imageData, 
-          'gpt-4o-mini', 
+          'gpt-4o', 
           currentMessages
         );
       } else {
         // Use regular text API call
         aiResponse = await sendMessage(
           content, 
-          'gpt-4o-mini', 
+          'gpt-4o', 
           currentMessages
         );
       }
-      
+
       // Add AI response to the chat
       const newMessage: Message = {
         ...aiResponse,
         timestamp: new Date().toISOString()
       };
-      
+
       const finalMessages = [...updatedMessages, newMessage];
       setMessages(finalMessages);
       updateCurrentChat(finalMessages);
@@ -120,15 +120,15 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         description: error instanceof Error ? error.message : 'Failed to get a response from the AI',
         variant: 'destructive',
       });
-      
+
       // Add error message
       const errorMessage: Message = {
         role: 'assistant',
         content: 'I apologize, but I encountered an error processing your request. Please try again later.',
-        model: 'gpt-4o-mini',
+        model: 'gpt-4o',
         timestamp: new Date().toISOString(),
       };
-      
+
       const finalMessages = [...updatedMessages, errorMessage];
       setMessages(finalMessages);
       updateCurrentChat(finalMessages);
@@ -141,49 +141,49 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const regenerateLastResponse = useCallback(async () => {
     // We need at least a user message to regenerate a response
     if (messages.length < 1) return;
-    
+
     // Find the last user message
     const lastUserMessageIndex = [...messages].reverse().findIndex(m => m.role === 'user');
     if (lastUserMessageIndex === -1) return;
-    
+
     // Get the actual index in the original array
     const userMessageIndex = messages.length - 1 - lastUserMessageIndex;
     const userMessage = messages[userMessageIndex];
-    
+
     // Remove the last AI response and any subsequent messages
     const messagesUpToUserMessage = messages.slice(0, userMessageIndex + 1);
     setMessages(messagesUpToUserMessage);
     updateCurrentChat(messagesUpToUserMessage);
-    
+
     // Show loading state
     setIsLoading(true);
-    
+
     try {
       // Get all messages up to the user message, including system message for context
       const currentMessages = [systemMessage, ...messagesUpToUserMessage];
-      
+
       // Extract content from user message
       const content = typeof userMessage.content === 'string' 
         ? userMessage.content 
         : 'Could not retrieve message content';
-      
+
       // Call the API to regenerate the response
       const aiResponse = await sendMessage(
         content,
-        'gpt-4o-mini',
+        'gpt-4o',
         currentMessages
       );
-      
+
       // Add the new AI response to the chat
       const newMessage: Message = {
         ...aiResponse,
         timestamp: new Date().toISOString()
       };
-      
+
       const finalMessages = [...messagesUpToUserMessage, newMessage];
       setMessages(finalMessages);
       updateCurrentChat(finalMessages);
-      
+
       toast({
         title: 'Response regenerated',
         description: 'A new AI response has been generated',
@@ -196,15 +196,15 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         description: error instanceof Error ? error.message : 'Failed to regenerate the AI response',
         variant: 'destructive',
       });
-      
+
       // Add error message
       const errorMessage: Message = {
         role: 'assistant',
         content: 'I apologize, but I encountered an error generating a new response. Please try again later.',
-        model: 'gpt-4o-mini',
+        model: 'gpt-4o',
         timestamp: new Date().toISOString(),
       };
-      
+
       const finalMessages = [...messagesUpToUserMessage, errorMessage];
       setMessages(finalMessages);
       updateCurrentChat(finalMessages);
@@ -227,48 +227,48 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('Invalid user message index:', userMessageIndex);
       return;
     }
-    
+
     // Verify it's a user message
     const userMessage = messages[userMessageIndex];
     if (userMessage.role !== 'user') {
       console.error('Expected a user message at index:', userMessageIndex);
       return;
     }
-    
+
     // Remove all messages after this user message
     const messagesUpToUserMessage = messages.slice(0, userMessageIndex + 1);
     setMessages(messagesUpToUserMessage);
     updateCurrentChat(messagesUpToUserMessage);
-    
+
     // Show loading state
     setIsLoading(true);
-    
+
     try {
       // Get all messages up to the user message, including system message for context
       const currentMessages = [systemMessage, ...messagesUpToUserMessage];
-      
+
       // Extract content from user message
       const content = typeof userMessage.content === 'string' 
         ? userMessage.content 
         : 'Could not retrieve message content';
-      
+
       // Call the API to regenerate the response
       const aiResponse = await sendMessage(
         content,
-        'gpt-4o-mini',
+        'gpt-4o',
         currentMessages
       );
-      
+
       // Add the new AI response to the chat
       const newMessage: Message = {
         ...aiResponse,
         timestamp: new Date().toISOString()
       };
-      
+
       const finalMessages = [...messagesUpToUserMessage, newMessage];
       setMessages(finalMessages);
       updateCurrentChat(finalMessages);
-      
+
       toast({
         title: 'Response regenerated',
         description: 'A new AI response has been generated',
@@ -281,15 +281,15 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         description: error instanceof Error ? error.message : 'Failed to regenerate the AI response',
         variant: 'destructive',
       });
-      
+
       // Add error message
       const errorMessage: Message = {
         role: 'assistant',
         content: 'I apologize, but I encountered an error generating a new response. Please try again later.',
-        model: 'gpt-4o-mini',
+        model: 'gpt-4o',
         timestamp: new Date().toISOString(),
       };
-      
+
       const finalMessages = [...messagesUpToUserMessage, errorMessage];
       setMessages(finalMessages);
       updateCurrentChat(finalMessages);

@@ -33,7 +33,7 @@ export async function uploadImage(file: File): Promise<string> {
 export async function sendMessageWithImage(
   content: string,
   imageData: string | null,
-  model: 'gpt-4o-mini' | 'llama-4-maverick',
+  model: 'gpt-4o' | 'gpt-4o-mini' | 'llama-4-maverick',
   messages: Message[]
 ): Promise<Message> {
   try {
@@ -88,7 +88,7 @@ export async function sendMessageWithImage(
 
 export async function sendMessage(
   content: string,
-  model: 'gpt-4o-mini' | 'llama-4-maverick',
+  model: 'gpt-4o' | 'gpt-4o-mini' | 'llama-4-maverick',
   messages: Message[]
 ): Promise<Message> {
   try {

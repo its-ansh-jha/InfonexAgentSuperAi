@@ -19,8 +19,8 @@ export const getSystemMessage = (): Message => ({
 
 export const getWelcomeMessage = (model: string): Message => ({
   role: 'assistant',
-  content: `Hello! I'm InfonexAgent, your advanced AI assistant running on OpenAi GPT-4o-mini ai engine and bringed to this world by Infonex. I'm here to help with questions, creative tasks, coding problems, or just friendly conversation. Feel free to ask me anything! My privacy policy and terms of use are available through the menu next to the New Chat button.`,
-  model: 'gpt-4o-mini',
+  content: `Hello! I'm InfonexAgent, your advanced AI assistant running on OpenAI GPT-4o engine and brought to this world by Infonex. I'm here to help with questions, creative tasks, coding problems, or just friendly conversation. I can also analyze images - just upload any image (JPG, PNG, etc.) and I'll help you understand what's in it! My privacy policy and terms of use are available through the menu next to the New Chat button.`,
+  model: 'gpt-4o',
   timestamp: new Date().toISOString(),
 });
 

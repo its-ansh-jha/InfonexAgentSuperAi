@@ -288,7 +288,7 @@ export function ChatInput() {
             {isListening ? (
               <span className="text-red-400">Listening...</span>
             ) : (
-              <span>Infonex is using GPT-4o-mini to generate human-like text</span>
+              <span>Infonex is using GPT-4o to generate human-like text and analyze images</span>
             )}
           </div>
         </form>
