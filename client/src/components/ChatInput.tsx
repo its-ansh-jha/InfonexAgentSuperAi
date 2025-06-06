@@ -276,7 +276,7 @@ export function ChatInput() {
           <div className="relative bg-neutral-800 rounded-xl border border-neutral-700 overflow-hidden">
             <div className="flex items-end">
               {/* Text input area */}
-              <div className="flex-1">
+              <div className="flex-1 min-h-[52px]">
                 <textarea
                   ref={textareaRef}
                   value={input}
@@ -288,13 +288,14 @@ export function ChatInput() {
                       ? "Processing image..." 
                       : "Ask anything"
                   }
-                  className="w-full py-4 px-4 bg-transparent border-none focus:outline-none focus:ring-0 resize-none text-white placeholder-neutral-500 min-h-[52px] max-h-[200px]"
+                  className="w-full py-4 px-4 bg-transparent border-none focus:outline-none focus:ring-0 resize-none text-white placeholder-neutral-500 min-h-[52px] max-h-[200px] leading-6"
                   disabled={isLoading || isUploadingImage}
+                  style={{ height: 'auto' }}
                 />
               </div>
 
-              {/* Action buttons */}
-              <div className="flex items-center space-x-2 px-3 pb-3">
+              {/* Action buttons - Fixed position */}
+              <div className="flex items-end space-x-2 px-3 pb-3 self-end">
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
