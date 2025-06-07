@@ -1,4 +1,4 @@
-import { searchSerper } from './services/serper';
+import { searchOpenAIEnhanced } from './services/search';
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { z } from "zod";
@@ -13,7 +13,7 @@ import { messages, chatSessions } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Search endpoint for realtime data
+  // Search endpoint for realtime data using OpenAI
   app.post('/api/search', async (req, res) => {
     try {
       const { query } = req.body;
@@ -22,11 +22,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Query is required and must be a string' });
       }
       
-      const data = await searchSerper(query);
+      const data = await searchOpenAIEnhanced(query);
       res.json(data);
     } catch (error: any) {
-      log(`Error in search endpoint: ${error.message}`, "error");
-      res.status(500).json({ error: error.message || 'Search failed' });
+      log(`Error in OpenAI search endpoint: ${error.message}`, "error");
+      res.status(500).json({ error: error.message || 'OpenAI search failed' });
     }
   });
   app.post("/api/upload-image", async (req, res) => {
@@ -289,9 +289,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       missingKeys.push("DATABASE_URL");
     }
 
-    if (!process.env.SERPER_API_KEY) {
-      missingKeys.push("SERPER_API_KEY");
-    }
+    // OpenAI API key is already checked above - no additional search API key needed
     
     if (missingKeys.length > 0) {
       return res.status(500).json({ 

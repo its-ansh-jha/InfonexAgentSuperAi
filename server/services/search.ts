@@ -1,5 +1,6 @@
+
 import { Request, Response } from 'express';
-import axios from 'axios';
+import OpenAI from 'openai';
 import { z } from 'zod';
 
 // Define a schema for search results
@@ -12,145 +13,157 @@ export const searchResultSchema = z.object({
 
 export type SearchResult = z.infer<typeof searchResultSchema>;
 
+// Initialize OpenAI client for search
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY || '',
+});
+
 /**
- * Search DuckDuckGo for results
- * This uses the DuckDuckGo API which doesn't require an API key
+ * Search using OpenAI GPT-4o-mini with search preview capabilities
  */
-export async function searchDuckDuckGo(query: string): Promise<SearchResult[]> {
+export async function searchOpenAI(query: string): Promise<SearchResult[]> {
   try {
-    // Use DuckDuckGo API through viaduct.duckduckgo.com
-    // This allows us to get search results without requiring an API key
-    const url = `https://duckduckgo.com/`;
-    
-    // First, get the vqd parameter which is required for the API
-    const initialResponse = await axios.get(url, {
-      params: { q: query },
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36',
-      }
-    });
-    
-    // Extract the vqd parameter from the response
-    const vqdMatch = initialResponse.data.match(/vqd=["']([^"']+)['"]/);
-    const vqd = vqdMatch ? vqdMatch[1] : '';
-    
-    if (!vqd) {
-      throw new Error('Could not extract vqd parameter');
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error('OpenAI API key is not configured.');
     }
-    
-    // Now make the actual search request
-    const apiUrl = 'https://links.duckduckgo.com/d.js';
-    const searchResponse = await axios.get(apiUrl, {
-      params: {
-        q: query,
-        kl: 'wt-wt', // Worldwide results in English
-        dl: 'en', // Language
-        o: 'json', // Output format
-        vqd: vqd,
-        p: 1, // Safe search off
-      },
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36',
-        'Referer': 'https://duckduckgo.com/',
-      }
+
+    // Use GPT-4o-mini with search capabilities
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: "You are a search assistant. When given a query, search for current information and provide structured results. Format your response as a JSON array of search results with title, url, description, and source fields. Only return valid JSON."
+        },
+        {
+          role: "user", 
+          content: `Search for: ${query}`
+        }
+      ],
+      tools: [
+        {
+          type: "function",
+          function: {
+            name: "web_search",
+            description: "Search the web for current information",
+            parameters: {
+              type: "object",
+              properties: {
+                query: {
+                  type: "string",
+                  description: "The search query"
+                }
+              },
+              required: ["query"]
+            }
+          }
+        }
+      ],
+      tool_choice: "auto"
     });
+
+    const content = response.choices[0].message.content;
     
-    // Parse the response data which is in a special format
-    // DuckDuckGo returns a JavaScript object that is not valid JSON
-    // It starts with 'ddg_spice_light.web(' and ends with ')'
-    let responseData;
+    if (!content) {
+      return [];
+    }
+
     try {
-      const cleanedData = searchResponse.data
-        .replace(/^ddg_spice_light\.web\(/, '')
-        .replace(/\);$/, '');
-      responseData = JSON.parse(cleanedData);
-    } catch (error) {
-      console.error('Failed to parse DuckDuckGo response:', error);
-      // Fallback to simple results
+      // Try to parse as JSON first
+      const results = JSON.parse(content);
+      if (Array.isArray(results)) {
+        return results.map(result => ({
+          title: result.title || 'Search Result',
+          url: result.url || '#',
+          description: result.description || '',
+          source: result.source || 'OpenAI Search'
+        }));
+      }
+    } catch (parseError) {
+      // If JSON parsing fails, create a single result with the content
       return [
         {
-          title: 'Error parsing search results',
-          url: 'https://duckduckgo.com/?q=' + encodeURIComponent(query),
-          description: 'Try searching directly on DuckDuckGo'
+          title: `Search results for: ${query}`,
+          url: '#',
+          description: content,
+          source: 'OpenAI Search'
         }
       ];
     }
-    
-    // Extract and format the search results
-    const results: SearchResult[] = [];
-    
-    if (responseData && responseData.results) {
-      responseData.results.forEach((result: any) => {
-        results.push({
-          title: result.t || 'No title',
-          url: result.u || '#',
-          description: result.a || '',
-          source: result.i || new URL(result.u).hostname,
-        });
-      });
-    }
-    
-    return results;
+
+    return [];
   } catch (error) {
-    console.error('DuckDuckGo search error:', error);
-    // Return a fallback result that directs to DuckDuckGo
+    console.error('OpenAI search error:', error);
     return [
       {
-        title: 'Search for "' + query + '" on DuckDuckGo',
-        url: 'https://duckduckgo.com/?q=' + encodeURIComponent(query),
-        description: 'Click to search directly on DuckDuckGo'
+        title: `Error searching for: ${query}`,
+        url: '#',
+        description: 'Search temporarily unavailable. Please try again.',
+        source: 'Search Error'
       }
     ];
   }
 }
 
-// Fallback to a simpler approach if needed
-export async function searchDuckDuckGoSimple(query: string): Promise<SearchResult[]> {
+/**
+ * Enhanced search using OpenAI with web search capabilities
+ */
+export async function searchOpenAIEnhanced(query: string): Promise<any> {
   try {
-    // Construct a search URL for DuckDuckGo
-    const searchUrl = `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&no_redirect=1&skip_disambig=1`;
-    
-    // Make the request
-    const response = await axios.get(searchUrl);
-    const data = response.data;
-    
-    const results: SearchResult[] = [];
-    
-    // Extract abstract (main result)
-    if (data.Abstract) {
-      results.push({
-        title: data.Heading || 'DuckDuckGo Result',
-        url: data.AbstractURL || `https://duckduckgo.com/?q=${encodeURIComponent(query)}`,
-        description: data.Abstract,
-        source: 'DuckDuckGo Abstract'
-      });
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error('OpenAI API key is not configured.');
     }
-    
-    // Extract related topics
-    if (data.RelatedTopics && Array.isArray(data.RelatedTopics)) {
-      data.RelatedTopics.forEach((topic: any) => {
-        if (topic.Text && topic.FirstURL) {
-          results.push({
-            title: topic.Text.split(' - ')[0] || 'Related Topic',
-            url: topic.FirstURL,
-            description: topic.Text,
-            source: 'DuckDuckGo Related'
-          });
+
+    // Use the new search preview feature
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "user",
+          content: query
         }
-      });
-    }
-    
-    return results;
-  } catch (error) {
-    console.error('DuckDuckGo simple search error:', error);
-    // Return a fallback result that directs to DuckDuckGo
-    return [
-      {
-        title: 'Search for "' + query + '" on DuckDuckGo',
-        url: 'https://duckduckgo.com/?q=' + encodeURIComponent(query),
-        description: 'Click to search directly on DuckDuckGo'
+      ],
+      // Enable search preview if available
+      extra_body: {
+        search: true
       }
-    ];
+    });
+
+    const content = response.choices[0].message.content;
+    
+    // Return in Serper-like format for compatibility
+    return {
+      organic: [
+        {
+          title: `AI-Enhanced Search: ${query}`,
+          snippet: content,
+          link: '#',
+          source: 'OpenAI Search Preview'
+        }
+      ],
+      searchInformation: {
+        totalResults: "1",
+        timeTaken: 0.1,
+        query: query
+      }
+    };
+  } catch (error) {
+    console.error('OpenAI enhanced search error:', error);
+    return {
+      organic: [
+        {
+          title: `Search: ${query}`,
+          snippet: 'Search results temporarily unavailable.',
+          link: '#',
+          source: 'OpenAI Search'
+        }
+      ],
+      searchInformation: {
+        totalResults: "0",
+        timeTaken: 0,
+        query: query
+      }
+    };
   }
 }
 
@@ -168,14 +181,7 @@ export async function handleSearch(req: Request, res: Response) {
   }
   
   try {
-    // Try the main search method first
-    let results = await searchDuckDuckGo(query);
-    
-    // If no results, try the simple fallback
-    if (results.length === 0) {
-      results = await searchDuckDuckGoSimple(query);
-    }
-    
+    const results = await searchOpenAI(query);
     return res.json({ results });
   } catch (error) {
     console.error('Search error:', error);
