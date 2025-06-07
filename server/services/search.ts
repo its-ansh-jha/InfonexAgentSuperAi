@@ -116,17 +116,13 @@ export async function searchOpenAIEnhanced(query: string): Promise<any> {
 
     // Use the new search preview feature
     const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-4o-mini-search-preview",
       messages: [
         {
           role: "user",
           content: query
         }
-      ],
-      // Enable search preview if available
-      extra_body: {
-        search: true
-      }
+      ]
     });
 
     const content = response.choices[0].message.content;
