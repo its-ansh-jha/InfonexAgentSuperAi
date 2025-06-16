@@ -78,7 +78,7 @@ export default function TermsConditions() {
 
             <h2 className="text-xl font-semibold">10. Contact Us</h2>
             <p>If you have any questions about these Terms, please contact us at:</p>
-            <p>Email: terms@infoagentai.com</p>
+            <p>Email: infonex@tutoredge.site</p>
           </div>
         </div>
       </div>

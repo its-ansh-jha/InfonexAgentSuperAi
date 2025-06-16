@@ -72,7 +72,7 @@ export default function PrivacyPolicy() {
 
             <h2 className="text-xl font-semibold">7. Contact Us</h2>
             <p>If you have any questions about this privacy policy or our privacy practices, please contact us at:</p>
-            <p>Email: privacy@infoagentai.com</p>
+            <p>Email: infonex@tutoredge.site</p>
           </div>
         </div>
       </div>
