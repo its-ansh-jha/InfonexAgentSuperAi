@@ -55,7 +55,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let response;
       
       // Route to appropriate model
-      if (chatRequest.model === "gpt-4o") {
+      if (chatRequest.model === "gpt-5") {
         // Use OpenAI's GPT-4o
         response = await generateOpenAIResponse(chatRequest);
       } else if (chatRequest.model === "gpt-4o-mini") {
