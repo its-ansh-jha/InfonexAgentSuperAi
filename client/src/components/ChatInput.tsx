@@ -485,8 +485,10 @@ export function ChatInput() {
                 type={isLoading ? "button" : "submit"}
                 onClick={isLoading ? stopGeneration : undefined}
                 disabled={isUploadingImage || (!isLoading && (!input.trim() && imageFiles.length === 0))}
-                className={`h-9 w-9 rounded-full bg-primary hover:bg-primary/90 text-white shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-all duration-200 ${
-                  isLoading ? 'bg-red-500 hover:bg-red-600 animate-pulse' : ''
+                className={`h-9 w-9 rounded-full text-white shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-all duration-200 ${
+                  isLoading 
+                    ? 'bg-muted-foreground hover:bg-muted-foreground/80 animate-pulse' 
+                    : 'bg-primary hover:bg-primary/90'
                 }`}
               >
                 {isLoading ? (
