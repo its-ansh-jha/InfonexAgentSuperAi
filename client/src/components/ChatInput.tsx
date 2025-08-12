@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect, ChangeEvent } from 'react';
-import { Send, Volume2, ImagePlus, Image, X, Mic, Search } from 'lucide-react';
+import { Send, Volume2, ImagePlus, Image, X, Mic, Search, Camera, FolderOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChat } from '@/context/ChatContext';
 import { autoResizeTextarea } from '@/utils/helpers';
@@ -11,6 +11,12 @@ import {
   TooltipTrigger 
 } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 export function ChatInput() {
   const [input, setInput] = useState('');
@@ -21,6 +27,7 @@ export function ChatInput() {
   const [isSearchMode, setIsSearchMode] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const { sendUserMessage, searchAndRespond, isLoading } = useChat();
   const { toast } = useToast();
 
@@ -134,9 +141,15 @@ export function ChatInput() {
     }
   };
 
-  const handleImageClick = () => {
+  const handleGalleryClick = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click();
+    }
+  };
+
+  const handleCameraClick = () => {
+    if (cameraInputRef.current) {
+      cameraInputRef.current.click();
     }
   };
 
@@ -201,9 +214,12 @@ export function ChatInput() {
     setImageName('');
     setIsUploadingImage(false);
 
-    // Reset file input
+    // Reset both file inputs
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
+    }
+    if (cameraInputRef.current) {
+      cameraInputRef.current.value = '';
     }
   };
 
@@ -220,13 +236,23 @@ export function ChatInput() {
       <div className="container mx-auto px-4">
         {/* Now let's add our text-to-speech component */}
         <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
-          {/* Hidden file input for image upload */}
+          {/* Hidden file inputs for image upload */}
           <input 
             type="file"
             ref={fileInputRef}
             onChange={handleFileChange}
             accept="image/*"
             className="hidden"
+            data-testid="input-gallery-upload"
+          />
+          <input 
+            type="file"
+            ref={cameraInputRef}
+            onChange={handleFileChange}
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            data-testid="input-camera-capture"
           />
 
           {/* Image preview (if uploaded or uploading) */}
@@ -281,27 +307,41 @@ export function ChatInput() {
               </TooltipProvider>
 
               {!isSearchMode && (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={handleImageClick}
-                        disabled={isUploadingImage}
-                        className={`h-9 w-9 rounded-full hover:bg-neutral-700 ${
-                          imageFile ? 'text-primary hover:text-primary' : 'text-neutral-400 hover:text-white'
-                        } ${isUploadingImage ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      >
-                        <ImagePlus className={`h-5 w-5 ${isUploadingImage ? 'animate-pulse' : ''}`} />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="top">
-                      <p>Upload image</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <DropdownMenu>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            disabled={isUploadingImage}
+                            className={`h-9 w-9 rounded-full hover:bg-neutral-700 ${
+                              imageFile ? 'text-primary hover:text-primary' : 'text-neutral-400 hover:text-white'
+                            } ${isUploadingImage ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            data-testid="button-image-options"
+                          >
+                            <ImagePlus className={`h-5 w-5 ${isUploadingImage ? 'animate-pulse' : ''}`} />
+                          </Button>
+                        </DropdownMenuTrigger>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">
+                        <p>Add image</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <DropdownMenuContent align="start" className="w-48">
+                    <DropdownMenuItem onClick={handleCameraClick} className="cursor-pointer" data-testid="option-camera">
+                      <Camera className="mr-2 h-4 w-4" />
+                      Take Photo
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleGalleryClick} className="cursor-pointer" data-testid="option-gallery">
+                      <FolderOpen className="mr-2 h-4 w-4" />
+                      Choose from Gallery
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               )}
             </div>
 
