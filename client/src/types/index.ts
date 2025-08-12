@@ -16,29 +16,3 @@ export interface Chat {
   createdAt: string;
   updatedAt: string;
 }
-
-export interface SearchResult {
-  title: string;
-  url: string;
-  description?: string;
-  source?: string;
-}
-
-export interface SearchResponse {
-  results: SearchResult[];
-}
-
-export interface DocumentMetadata {
-  filename: string;
-  fileType: string;
-  fileSize: number;
-  pageCount?: number;
-  wordCount?: number;
-}
-
-export interface DocumentProcessingResult {
-  success: boolean;
-  content?: string;
-  metadata?: DocumentMetadata;
-  error?: string;
-}
