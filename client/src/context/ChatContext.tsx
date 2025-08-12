@@ -145,10 +145,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return { ...msg, content: String(msg.content) };
         });
         
-        aiResponse = await sendMessage(messagesForAPI, 'gpt-4o');
+        aiResponse = await sendMessage(content, 'gpt-4o', messagesForAPI);
       } else {
         // Regular text-only API call
-        aiResponse = await sendMessage(currentMessages, 'gpt-4o');
+        aiResponse = await sendMessage(content, 'gpt-4o', currentMessages);
       }
 
       // Add AI response to the chat
@@ -321,7 +321,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         : 'Could not retrieve message content';
 
       // Check if this is a search message
-      const isSearchMessage = userMessage.model === 'search' || content.startsWith('🔍');
+      const isSearchMessage = content.startsWith('🔍');
 
       if (isSearchMessage) {
         // Extract the actual search query (remove 🔍 if present)
@@ -382,7 +382,9 @@ Please synthesize this information and provide a helpful response that directly 
         const aiResponse = await sendMessage(
           refinedPrompt,
           'gpt-4o-mini',
-          currentMessages
+          currentMessages.filter((msg): msg is Message => 
+            'model' in msg && 'timestamp' in msg
+          )
         );
 
         // Add the refined AI response to the chat
@@ -406,16 +408,26 @@ Please synthesize this information and provide a helpful response that directly 
         const currentMessages = [systemMessage, ...messagesUpToUserMessage];
 
         // Check if the message contains image data
-        const hasImage = userMessage.imageData || 
-          (Array.isArray(userMessage.content) && 
-           userMessage.content.some((item: any) => item.type === 'image'));
+        const hasImage = Array.isArray(userMessage.content) && 
+           userMessage.content.some((item: any) => item.type === 'image_url' || item.type === 'image');
 
         let aiResponse;
         if (hasImage) {
           // Handle image messages with GPT-4o
+          let imageData = null;
+          if (Array.isArray(userMessage.content)) {
+            const imageItem = userMessage.content.find((item: any) => 
+              item.type === 'image_url' || item.type === 'image'
+            );
+            if (imageItem && 'image_url' in imageItem && imageItem.image_url?.url) {
+              imageData = imageItem.image_url.url.replace('data:image/jpeg;base64,', '');
+            } else if (imageItem && 'image_data' in imageItem && imageItem.image_data) {
+              imageData = imageItem.image_data;
+            }
+          }
           aiResponse = await sendMessageWithImage(
             typeof userMessage.content === 'string' ? userMessage.content : '',
-            userMessage.imageData,
+            imageData,
             'gpt-4o',
             currentMessages
           );
@@ -476,7 +488,7 @@ Please synthesize this information and provide a helpful response that directly 
     const userMessage: Message = {
       role: 'user',
       content: `🔍 ${query}`,
-      model: 'search',
+      model: 'gpt-4o',
       timestamp: new Date().toISOString(),
     };
 
@@ -541,7 +553,9 @@ Please synthesize this information and provide a helpful response that directly 
       const aiResponse = await sendMessage(
         refinedPrompt,
         'gpt-4o-mini',
-        currentMessages
+        currentMessages.filter((msg): msg is Message => 
+          'model' in msg && 'timestamp' in msg
+        )
       );
 
       // Add the refined AI response to the chat
@@ -591,7 +605,7 @@ Please synthesize this information and provide a helpful response that directly 
       isLoading, 
       regenerateLastResponse,
       regenerateResponseAtIndex,
-      clearMessages 
+
     }}>
       {children}
     </ChatContext.Provider>
