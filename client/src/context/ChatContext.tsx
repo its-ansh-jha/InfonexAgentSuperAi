@@ -7,7 +7,7 @@ import { useChatHistory } from '@/context/ChatHistoryContext';
 
 interface ChatContextType {
   messages: Message[];
-  sendUserMessage: (content: string, imageFile?: File | null) => Promise<void>;
+  sendUserMessage: (content: string, imageFiles?: File[]) => Promise<void>;
   searchAndRespond: (query: string) => Promise<void>;
   isLoading: boolean;
   regenerateLastResponse: () => Promise<void>;
@@ -51,11 +51,11 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return realTimeKeywords.some(keyword => lowerQuery.includes(keyword));
   };
 
-  const sendUserMessage = useCallback(async (content: string, imageFile?: File | null) => {
-    if (!content.trim() && !imageFile) return;
+  const sendUserMessage = useCallback(async (content: string, imageFiles?: File[]) => {
+    if (!content.trim() && (!imageFiles || imageFiles.length === 0)) return;
 
     // Check if this is a real-time query that should be automatically searched
-    const shouldAutoSearch = !imageFile && isRealTimeQuery(content);
+    const shouldAutoSearch = (!imageFiles || imageFiles.length === 0) && isRealTimeQuery(content);
 
     if (shouldAutoSearch) {
       // Automatically route to search
@@ -63,30 +63,53 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
 
-    // Process any uploaded image file
-    let imageData: string | null = null;
-    if (imageFile) {
+    // Process multiple uploaded image files
+    let imageDataArray: string[] = [];
+    if (imageFiles && imageFiles.length > 0) {
       try {
-        // Get base64 representation of the image
-        imageData = await uploadImage(imageFile);
-        console.log('Image uploaded successfully');
+        // Process each image file
+        for (const imageFile of imageFiles) {
+          const imageData = await uploadImage(imageFile);
+          imageDataArray.push(imageData);
+        }
+        console.log(`${imageFiles.length} image(s) uploaded successfully`);
       } catch (error) {
-        console.error('Failed to process image:', error);
+        console.error('Failed to process images:', error);
         toast({
           title: 'Image Upload Error',
-          description: 'Failed to process the image. Please try again.',
+          description: 'Failed to process the images. Please try again.',
           variant: 'destructive',
         });
         return;
       }
     }
 
-    // Create the message content based on whether there's an image
-    let messageContent: string | Array<{type: string, text?: string, image_data?: string}> = content;
+    // Create the message content based on whether there are images
+    let messageContent: string | Array<{type: string, text?: string, image_url?: {url: string}}> = content;
 
-    if (imageFile && imageData) {
-      // Store a text representation in the UI for the user's message
-      messageContent = `[Image attached] ${content}`;
+    if (imageFiles && imageFiles.length > 0 && imageDataArray.length > 0) {
+      // Create array content format for multiple images
+      const contentArray = [];
+      
+      // Add text content if provided
+      if (content.trim()) {
+        contentArray.push({
+          type: 'text',
+          text: content
+        });
+      }
+      
+      // Add each image
+      for (const imageData of imageDataArray) {
+        contentArray.push({
+          type: 'image_url',
+          image_url: {
+            url: `data:image/jpeg;base64,${imageData}`
+          }
+        });
+      }
+      
+      messageContent = contentArray;
     }
 
     const userMessage: Message = {
@@ -110,21 +133,22 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       let aiResponse;
 
-      if (imageFile && imageData) {
-        // Use the image-enabled API call
-        aiResponse = await sendMessageWithImage(
-          content, 
-          imageData, 
-          'gpt-4o', 
-          currentMessages
-        );
+      if (imageFiles && imageFiles.length > 0 && imageDataArray.length > 0) {
+        // Use the image-enabled API call with multiple images
+        // Convert the messages to the proper format with image data
+        const messagesForAPI = currentMessages.map(msg => {
+          // For the user message with images, send the array format
+          if (msg.role === 'user' && Array.isArray(msg.content)) {
+            return { ...msg, content: msg.content };
+          }
+          // For other messages, convert to string
+          return { ...msg, content: String(msg.content) };
+        });
+        
+        aiResponse = await sendMessage(messagesForAPI, 'gpt-4o');
       } else {
-        // Use regular text API call
-        aiResponse = await sendMessage(
-          content, 
-          'gpt-4o', 
-          currentMessages
-        );
+        // Regular text-only API call
+        aiResponse = await sendMessage(currentMessages, 'gpt-4o');
       }
 
       // Add AI response to the chat

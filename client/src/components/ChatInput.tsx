@@ -20,9 +20,9 @@ import {
 
 export function ChatInput() {
   const [input, setInput] = useState('');
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imageName, setImageName] = useState<string>('');
-  const [imagePreviewUrl, setImagePreviewUrl] = useState<string>('');
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([]);
+  const [imageNames, setImageNames] = useState<string[]>([]);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [isSearchMode, setIsSearchMode] = useState(false);
@@ -42,21 +42,22 @@ export function ChatInput() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Must have either text or an image to submit
-    if ((!input.trim() && !imageFile) || isLoading) return;
+    // Must have either text or images to submit
+    if ((!input.trim() && imageFiles.length === 0) || isLoading) return;
 
-    if (isSearchMode && !imageFile) {
+    if (isSearchMode && imageFiles.length === 0) {
       // Use search mode - search and get AI refined response
       await searchAndRespond(input);
     } else {
-      // Regular chat mode - send the message with optional image
-      await sendUserMessage(input, imageFile);
+      // Regular chat mode - send the message with optional images
+      await sendUserMessage(input, imageFiles.length > 0 ? imageFiles : undefined);
     }
 
     // Reset state
     setInput('');
-    setImageFile(null);
-    setImageName('');
+    setImageFiles([]);
+    setImageNames([]);
+    setImagePreviewUrls([]);
     setIsSearchMode(false);
 
     // Reset textarea height
@@ -158,86 +159,109 @@ export function ChatInput() {
     const files = e.target.files;
 
     if (files && files.length > 0) {
-      const file = files[0];
-
-      // Check if the file is an image
-      if (!file.type.startsWith('image/')) {
-        toast({
-          title: "Error",
-          description: "Please select an image file (JPEG, PNG, etc.)",
-          variant: "destructive",
-          duration: 3000,
-        });
-        return;
-      }
-
-      // Check file size (limit to 8MB)
-      if (file.size > 8 * 1024 * 1024) {
-        toast({
-          title: "Error",
-          description: "Image file is too large (maximum: 8MB)",
-          variant: "destructive",
-          duration: 3000,
-        });
-        return;
-      }
-
       setIsUploadingImage(true);
-      setImageName(file.name);
+      
+      const newFiles: File[] = [];
+      const newPreviewUrls: string[] = [];
+      const newNames: string[] = [];
+      
+      // Process multiple files (max 16 for GPT-4o)
+      const filesToProcess = Array.from(files).slice(0, 16);
+      
+      for (const file of filesToProcess) {
+        // Check if the file is an image
+        if (!file.type.startsWith('image/')) {
+          toast({
+            title: "Error",
+            description: `"${file.name}" is not an image file`,
+            variant: "destructive",
+            duration: 3000,
+          });
+          continue;
+        }
 
-      try {
-        // Create preview URL for the image
-        const previewUrl = URL.createObjectURL(file);
-        setImagePreviewUrl(previewUrl);
+        // Check file size (limit to 8MB per file)
+        if (file.size > 8 * 1024 * 1024) {
+          toast({
+            title: "Error",
+            description: `"${file.name}" is too large (maximum: 8MB per file)`,
+            variant: "destructive",
+            duration: 3000,
+          });
+          continue;
+        }
+
+        try {
+          // Create preview URL for the image
+          const previewUrl = URL.createObjectURL(file);
+          
+          newFiles.push(file);
+          newPreviewUrls.push(previewUrl);
+          newNames.push(file.name);
+        } catch (error) {
+          toast({
+            title: "Error",
+            description: `Failed to process "${file.name}"`,
+            variant: "destructive",
+            duration: 3000,
+          });
+        }
+      }
+
+      if (newFiles.length > 0) {
+        // Add to existing files instead of replacing them
+        setImageFiles(prev => [...prev, ...newFiles]);
+        setImagePreviewUrls(prev => [...prev, ...newPreviewUrls]);
+        setImageNames(prev => [...prev, ...newNames]);
 
         // Simulate processing time for better UX
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        setImageFile(file);
-        setIsUploadingImage(false);
+        await new Promise(resolve => setTimeout(resolve, 300));
 
         toast({
-          title: "Image ready",
-          description: `Image "${file.name}" is ready to send`,
+          title: "Images ready",
+          description: `${newFiles.length} image${newFiles.length > 1 ? 's' : ''} ready to send`,
           duration: 2000,
         });
-      } catch (error) {
-        setIsUploadingImage(false);
-        setImageName('');
-        toast({
-          title: "Error",
-          description: "Failed to process image. Please try again.",
-          variant: "destructive",
-          duration: 3000,
-        });
       }
+      
+      setIsUploadingImage(false);
     }
   };
 
-  const removeImage = () => {
-    // Clean up the preview URL to prevent memory leaks
-    if (imagePreviewUrl) {
-      URL.revokeObjectURL(imagePreviewUrl);
-    }
-    
-    setImageFile(null);
-    setImageName('');
-    setImagePreviewUrl('');
-    setIsUploadingImage(false);
+  const removeImage = (indexToRemove?: number) => {
+    if (indexToRemove !== undefined) {
+      // Remove specific image
+      const urlToRevoke = imagePreviewUrls[indexToRemove];
+      if (urlToRevoke) {
+        URL.revokeObjectURL(urlToRevoke);
+      }
+      
+      setImageFiles(prev => prev.filter((_, i) => i !== indexToRemove));
+      setImagePreviewUrls(prev => prev.filter((_, i) => i !== indexToRemove));
+      setImageNames(prev => prev.filter((_, i) => i !== indexToRemove));
+    } else {
+      // Remove all images
+      imagePreviewUrls.forEach(url => URL.revokeObjectURL(url));
+      
+      setImageFiles([]);
+      setImageNames([]);
+      setImagePreviewUrls([]);
+      setIsUploadingImage(false);
 
-    // Reset both file inputs
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-    if (cameraInputRef.current) {
-      cameraInputRef.current.value = '';
+      // Reset both file inputs
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      if (cameraInputRef.current) {
+        cameraInputRef.current.value = '';
+      }
     }
   };
 
   const toggleSearchMode = () => {
     setIsSearchMode(!isSearchMode);
-    if (imageFile) {
-      // Clear image when switching to search mode since search doesn't support images
+    if (imageFiles.length > 0) {
+      // Clear images when switching to search mode since search doesn't support images
       removeImage();
     }
   };
@@ -253,6 +277,7 @@ export function ChatInput() {
             ref={fileInputRef}
             onChange={handleFileChange}
             accept="image/*"
+            multiple
             className="hidden"
             data-testid="input-gallery-upload"
           />
@@ -266,47 +291,58 @@ export function ChatInput() {
             data-testid="input-camera-capture"
           />
 
-          {/* Image preview (if uploaded or uploading) */}
-          {(imageFile || isUploadingImage) && (
+          {/* Multiple images preview */}
+          {(imageFiles.length > 0 || isUploadingImage) && (
             <div className="mb-3 p-3 bg-neutral-800 rounded-lg border border-neutral-700">
-              <div className="flex items-start gap-3">
-                {imagePreviewUrl && !isUploadingImage && (
-                  <div className="flex-shrink-0">
-                    <img 
-                      src={imagePreviewUrl}
-                      alt="Preview"
-                      className="w-16 h-16 object-cover rounded-lg border border-neutral-600"
-                      data-testid="image-preview"
-                    />
-                  </div>
-                )}
-                {isUploadingImage && (
-                  <div className="flex-shrink-0 w-16 h-16 bg-neutral-700 rounded-lg flex items-center justify-center">
-                    <Image className="h-6 w-6 text-neutral-500 animate-pulse" />
-                  </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Image className={`h-4 w-4 ${isUploadingImage ? 'animate-pulse text-neutral-500' : 'text-primary'}`} />
-                    <span className="text-sm font-medium text-white">
-                      {isUploadingImage ? 'Processing image...' : 'Image ready'}
-                    </span>
-                  </div>
-                  <p className="text-sm text-neutral-400 truncate" data-testid="image-filename">
-                    {imageName}
-                  </p>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Image className={`h-4 w-4 ${isUploadingImage ? 'animate-pulse text-neutral-500' : 'text-primary'}`} />
+                  <span className="text-sm font-medium text-white">
+                    {isUploadingImage ? 'Processing images...' : `${imageFiles.length} image${imageFiles.length !== 1 ? 's' : ''} ready`}
+                  </span>
                 </div>
-                {!isUploadingImage && (
+                {!isUploadingImage && imageFiles.length > 0 && (
                   <Button
                     type="button"
                     variant="ghost"
-                    size="icon"
-                    onClick={removeImage}
-                    className="h-8 w-8 rounded-full hover:bg-neutral-700 text-neutral-400 hover:text-white flex-shrink-0"
-                    data-testid="button-remove-image"
+                    size="sm"
+                    onClick={() => removeImage()}
+                    className="text-xs text-neutral-400 hover:text-white"
+                    data-testid="button-remove-all-images"
                   >
-                    <X className="h-4 w-4" />
+                    Clear all
                   </Button>
+                )}
+              </div>
+              
+              <div className="grid grid-cols-4 gap-2">
+                {imagePreviewUrls.map((url, index) => (
+                  <div key={index} className="relative group">
+                    <img 
+                      src={url}
+                      alt={`Preview ${index + 1}`}
+                      className="w-full h-16 object-cover rounded border border-neutral-600"
+                      data-testid={`image-preview-${index}`}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeImage(index)}
+                      className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 hover:bg-red-600 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                      data-testid={`button-remove-image-${index}`}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                    <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-xs px-1 py-0.5 rounded-b truncate">
+                      {imageNames[index]}
+                    </div>
+                  </div>
+                ))}
+                {isUploadingImage && (
+                  <div className="w-full h-16 bg-neutral-700 rounded border border-neutral-600 flex items-center justify-center">
+                    <Image className="h-6 w-6 text-neutral-500 animate-pulse" />
+                  </div>
                 )}
               </div>
             </div>
@@ -347,7 +383,7 @@ export function ChatInput() {
                             size="icon"
                             disabled={isUploadingImage}
                             className={`h-9 w-9 rounded-full hover:bg-neutral-700 ${
-                              imageFile ? 'text-primary hover:text-primary' : 'text-neutral-400 hover:text-white'
+                              imageFiles.length > 0 ? 'text-primary hover:text-primary' : 'text-neutral-400 hover:text-white'
                             } ${isUploadingImage ? 'opacity-50 cursor-not-allowed' : ''}`}
                             data-testid="button-image-options"
                           >
@@ -382,10 +418,12 @@ export function ChatInput() {
               rows={1}
               placeholder={
                 isUploadingImage 
-                  ? "Processing image..." 
+                  ? "Processing images..." 
                   : isSearchMode
                     ? "Search for realtime information..."
-                    : "Ask Anything..."
+                    : imageFiles.length > 0
+                      ? `Ask about ${imageFiles.length} image${imageFiles.length !== 1 ? 's' : ''}...`
+                      : "Ask Anything..."
               }
               className="flex-1 py-3 px-3 bg-transparent border-none focus:outline-none focus:ring-0 resize-none text-white placeholder-neutral-500 min-h-[44px] max-h-[200px]"
               disabled={isLoading || isUploadingImage}
@@ -415,7 +453,7 @@ export function ChatInput() {
 
               <Button
                 type="submit"
-                disabled={isLoading || isUploadingImage || (!input.trim() && !imageFile)}
+                disabled={isLoading || isUploadingImage || (!input.trim() && imageFiles.length === 0)}
                 className="h-9 w-9 rounded-full bg-primary hover:bg-primary/90 text-white shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
               >
                 <Send className="h-5 w-5" />

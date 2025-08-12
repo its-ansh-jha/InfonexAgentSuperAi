@@ -142,7 +142,7 @@ export async function generateOpenAIResponse(
         role: "assistant",
         content: response.choices[0].message.content,
       },
-      model: "gpt-4o",
+      model: MODEL,
     };
   } catch (error: any) {
     log(`OpenAI API error: ${error.message}`, "error");

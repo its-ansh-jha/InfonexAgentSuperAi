@@ -62,6 +62,14 @@ const imageContentSchema = z.object({
   image_data: z.string(), // Base64 encoded image data
 });
 
+// Define the image_url content type schema (OpenAI format)
+const imageUrlContentSchema = z.object({
+  type: z.literal("image_url"),
+  image_url: z.object({
+    url: z.string(), // Data URL format
+  })
+});
+
 // Define the text content type schema
 const textContentSchema = z.object({
   type: z.literal("text"),
@@ -76,7 +84,7 @@ export const chatCompletionRequestSchema = z.object({
       role: z.enum(["user", "assistant", "system"]),
       content: z.union([
         z.string(),
-        z.array(z.union([textContentSchema, imageContentSchema]))
+        z.array(z.union([textContentSchema, imageContentSchema, imageUrlContentSchema]))
       ]),
     })
   ),
@@ -91,7 +99,7 @@ export const chatCompletionResponseSchema = z.object({
     role: z.enum(["assistant"]),
     content: z.string(),
   }),
-  model: z.enum(["gpt-4o-mini", "deepseek-r1", "llama-4-maverick"]),
+  model: z.enum(["gpt-4o", "gpt-4o-mini", "deepseek-r1", "llama-4-maverick"]),
 });
 
 export type ChatCompletionResponse = z.infer<typeof chatCompletionResponseSchema>;

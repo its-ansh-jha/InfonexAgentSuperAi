@@ -40,7 +40,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
 
   // Handle both string and array formats of content
   let contentString: string;
-  let imageData: string | null = null;
+  let images: string[] = [];
 
   if (typeof content === 'string') {
     contentString = content;
@@ -50,8 +50,15 @@ export function ChatMessage({ message }: ChatMessageProps) {
     for (const item of content) {
       if (item.type === 'text' && item.text) {
         textParts.push(item.text);
+      } else if (item.type === 'image_url' && item.image_url?.url) {
+        // Handle image_url format from OpenAI API
+        const url = item.image_url.url;
+        if (url.startsWith('data:image')) {
+          images.push(url);
+        }
       } else if (item.type === 'image' && item.image_data) {
-        imageData = item.image_data;
+        // Handle legacy image_data format
+        images.push(`data:image/jpeg;base64,${item.image_data}`);
       }
     }
     contentString = textParts.join('\n');
@@ -224,15 +231,27 @@ export function ChatMessage({ message }: ChatMessageProps) {
         ? 'bg-muted rounded-2xl accent-border p-4 max-w-[85%] shadow-md' 
         : 'bg-neutral-950 dark:bg-neutral-950 rounded-2xl p-4 max-w-[85%] shadow-md border border-neutral-800'}`}
       >
-        {/* Display image if present */}
-        {imageData && (
+        {/* Display images if present */}
+        {images.length > 0 && (
           <div className="mb-3">
-            <img 
-              src={`data:image/jpeg;base64,${imageData}`}
-              alt="User uploaded image"
-              className="max-w-full max-h-64 rounded-lg border border-neutral-600 object-contain"
-              data-testid="message-image"
-            />
+            <div className={`grid gap-2 ${images.length === 1 ? 'grid-cols-1' : images.length === 2 ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-3'}`}>
+              {images.map((imageUrl, index) => (
+                <div key={index} className="relative">
+                  <img 
+                    src={imageUrl}
+                    alt={`Uploaded image ${index + 1}`}
+                    className="max-w-full h-32 sm:h-40 rounded-lg border border-neutral-600 object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                    data-testid={`message-image-${index}`}
+                    onClick={() => window.open(imageUrl, '_blank')}
+                  />
+                  {images.length > 1 && (
+                    <div className="absolute top-1 right-1 bg-black/70 text-white text-xs px-1 py-0.5 rounded">
+                      {index + 1}/{images.length}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
