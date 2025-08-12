@@ -14,20 +14,28 @@ export interface TextData {
 export type MessageContent = string | (TextData | ImageData)[];
 
 export async function uploadImage(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    
-    reader.onload = () => {
-      const base64Data = reader.result as string;
-      resolve(base64Data);
-    };
-    
-    reader.onerror = () => {
-      reject(new Error('Failed to read file'));
-    };
-    
-    reader.readAsDataURL(file);
-  });
+  try {
+    // Create FormData to upload the image file
+    const formData = new FormData();
+    formData.append('image', file);
+
+    // Upload image to server and get URL
+    const response = await fetch('/api/upload-image', {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Upload failed: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+
+    return result.url;
+  } catch (error) {
+    console.error('Image upload failed:', error);
+    throw new Error('Failed to upload image');
+  }
 }
 
 export async function sendMessageWithImage(
