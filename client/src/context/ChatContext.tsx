@@ -420,10 +420,10 @@ Please synthesize this information and provide a helpful response that directly 
             const imageItem = userMessage.content.find((item: any) => 
               item.type === 'image_url' || item.type === 'image'
             );
-            if (imageItem && 'image_url' in imageItem && imageItem.image_url?.url) {
-              imageData = imageItem.image_url.url.replace('data:image/jpeg;base64,', '');
-            } else if (imageItem && 'image_data' in imageItem && imageItem.image_data) {
-              imageData = imageItem.image_data;
+            if (imageItem && 'image_url' in imageItem && (imageItem as any).image_url?.url) {
+              imageData = (imageItem as any).image_url.url.replace('data:image/jpeg;base64,', '');
+            } else if (imageItem && 'image_data' in imageItem && (imageItem as any).image_data) {
+              imageData = (imageItem as any).image_data;
             }
           }
           aiResponse = await sendMessageWithImage(
