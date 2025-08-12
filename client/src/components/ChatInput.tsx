@@ -42,27 +42,42 @@ export function ChatInput() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Must have either text or images to submit
-    if ((!input.trim() && imageFiles.length === 0) || isLoading) return;
+    // Prevent multiple submissions and ensure we have content
+    if (isLoading || isUploadingImage || (!input.trim() && imageFiles.length === 0)) return;
 
-    if (isSearchMode && imageFiles.length === 0) {
-      // Use search mode - search and get AI refined response
-      await searchAndRespond(input);
-    } else {
-      // Regular chat mode - send the message with optional images
-      await sendUserMessage(input, imageFiles.length > 0 ? imageFiles : undefined);
-    }
+    // Store current state before clearing
+    const currentInput = input.trim();
+    const currentImageFiles = [...imageFiles];
+    const currentSearchMode = isSearchMode;
 
-    // Reset state
+    // Clear state immediately for better UX
     setInput('');
-    setImageFiles([]);
-    setImageNames([]);
-    setImagePreviewUrls([]);
+    removeImage(); // This clears all images
     setIsSearchMode(false);
 
     // Reset textarea height
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
+    }
+
+    try {
+      if (currentSearchMode && currentImageFiles.length === 0) {
+        // Use search mode - search and get AI refined response
+        await searchAndRespond(currentInput);
+      } else {
+        // Regular chat mode - send the message with optional images
+        await sendUserMessage(currentInput, currentImageFiles.length > 0 ? currentImageFiles : undefined);
+      }
+    } catch (error) {
+      console.error('Failed to send message:', error);
+      // Restore input on error for retry
+      setInput(currentInput);
+      toast({
+        title: "Error",
+        description: "Failed to send message. Please try again.",
+        variant: "destructive",
+        duration: 3000,
+      });
     }
   };
 
