@@ -44,23 +44,7 @@ export function ChatContainer() {
           );
         })}
         
-        {isLoading && (
-          <div className="flex items-start space-x-3 animate-fade-in">
-            <div className="bg-primary rounded-full w-8 h-8 flex items-center justify-center text-white flex-shrink-0 mt-1 shadow-lg">
-              <Loader2 className="h-4 w-4 animate-spin" />
-            </div>
-            <div className="bg-card/80 backdrop-blur-sm rounded-lg p-4 shadow-lg border border-border/50">
-              <div className="flex items-center space-x-3">
-                <div className="flex space-x-1">
-                  <div className="w-2 h-2 rounded-full bg-primary animate-bounce"></div>
-                  <div className="w-2 h-2 rounded-full bg-primary animate-bounce delay-100"></div>
-                  <div className="w-2 h-2 rounded-full bg-primary animate-bounce delay-200"></div>
-                </div>
-                <span className="text-sm text-muted-foreground animate-pulse">AI is thinking...</span>
-              </div>
-            </div>
-          </div>
-        )}
+
         
         <div ref={messagesEndRef} />
       </div>

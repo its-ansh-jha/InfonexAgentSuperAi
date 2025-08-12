@@ -130,7 +130,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setMessages(updatedMessages);
     updateCurrentChat(updatedMessages);
 
-    // Show loading state
+    // Show loading state immediately, including for image processing
     setIsLoading(true);
 
     try {
@@ -225,12 +225,26 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (typeof userMessage.content === 'string') {
         textContent = userMessage.content;
       } else if (Array.isArray(userMessage.content)) {
-        // Handle multimodal content
+        // Handle multimodal content with proper image_url format
         const textPart = userMessage.content.find(item => item.type === 'text');
+        const imageUrlPart = userMessage.content.find(item => item.type === 'image_url');
         const imagePart = userMessage.content.find(item => item.type === 'image');
 
         textContent = textPart?.text || '';
-        imageData = imagePart?.image_data || null;
+        
+        // Handle different image formats - extract base64 from data URL
+        if (imageUrlPart && (imageUrlPart as any).image_url?.url) {
+          const imageUrl = (imageUrlPart as any).image_url.url;
+          if (imageUrl.startsWith('data:image/jpeg;base64,')) {
+            imageData = imageUrl.replace('data:image/jpeg;base64,', '');
+          } else if (imageUrl.startsWith('data:image/png;base64,')) {
+            imageData = imageUrl.replace('data:image/png;base64,', '');
+          }
+        } else if (imagePart && imagePart.image_data) {
+          imageData = imagePart.image_data;
+        } else {
+          imageData = null;
+        }
       } else {
         textContent = 'Could not retrieve message content';
       }
@@ -429,7 +443,12 @@ Please synthesize this information and provide a helpful response that directly 
               item.type === 'image_url' || item.type === 'image'
             );
             if (imageItem && 'image_url' in imageItem && (imageItem as any).image_url?.url) {
-              imageData = (imageItem as any).image_url.url.replace('data:image/jpeg;base64,', '');
+              const imageUrl = (imageItem as any).image_url.url;
+              if (imageUrl.startsWith('data:image/jpeg;base64,')) {
+                imageData = imageUrl.replace('data:image/jpeg;base64,', '');
+              } else if (imageUrl.startsWith('data:image/png;base64,')) {
+                imageData = imageUrl.replace('data:image/png;base64,', '');
+              }
             } else if (imageItem && 'image_data' in imageItem && (imageItem as any).image_data) {
               imageData = (imageItem as any).image_data;
             }
