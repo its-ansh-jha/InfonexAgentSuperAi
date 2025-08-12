@@ -12,6 +12,7 @@ interface ChatContextType {
   isLoading: boolean;
   regenerateLastResponse: () => Promise<void>;
   regenerateResponseAtIndex: (messageIndex: number) => Promise<void>;
+  clearMessages: () => void;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -605,7 +606,7 @@ Please synthesize this information and provide a helpful response that directly 
       isLoading, 
       regenerateLastResponse,
       regenerateResponseAtIndex,
-
+      clearMessages
     }}>
       {children}
     </ChatContext.Provider>
