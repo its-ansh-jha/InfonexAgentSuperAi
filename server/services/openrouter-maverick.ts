@@ -105,16 +105,20 @@ export async function generateMaverickResponse(
 // Handler for image uploads
 export async function handleImageUpload(req: Request, res: Response) {
   try {
-    const imageData = req.body.image;
+    // Check if file is uploaded via multer
+    const file = (req as any).file;
     
-    if (!imageData) {
+    if (!file) {
       return res.status(400).json({ error: 'No image data provided' });
     }
     
-    // Return success with the image data
+    // Convert buffer to base64
+    const base64Data = file.buffer.toString('base64');
+    
+    // Return success with the base64 image data
     return res.status(200).json({ 
       success: true, 
-      imageData 
+      url: base64Data // Return base64 data that can be used directly
     });
   } catch (error) {
     console.error('[express] Error handling image upload:', error);

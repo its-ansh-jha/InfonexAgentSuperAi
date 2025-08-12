@@ -11,8 +11,16 @@ import { log } from "./vite";
 import { db } from "./db";
 import { messages, chatSessions } from "@shared/schema";
 import { eq } from "drizzle-orm";
+import multer from 'multer';
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Configure multer for image uploads (memory storage)
+  const upload = multer({ 
+    storage: multer.memoryStorage(),
+    limits: {
+      fileSize: 8 * 1024 * 1024, // 8MB max file size
+    }
+  });
   // Search endpoint for realtime data using OpenAI
   app.post('/api/search', async (req, res) => {
     try {
@@ -29,7 +37,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: error.message || 'OpenAI search failed' });
     }
   });
-  app.post("/api/upload-image", async (req, res) => {
+  app.post("/api/upload-image", upload.single('image'), async (req, res) => {
     try {
       await handleImageUpload(req, res);
     } catch (error: any) {
