@@ -10,7 +10,9 @@ interface ChatContextType {
   sendUserMessage: (content: string, imageFiles?: File[]) => Promise<void>;
   searchAndRespond: (query: string) => Promise<void>;
   isLoading: boolean;
+  isTyping: boolean;
   stopGeneration: () => void;
+  stopTyping: () => void;
   regenerateLastResponse: () => Promise<void>;
   regenerateResponseAtIndex: (messageIndex: number) => Promise<void>;
   clearMessages: () => void;
@@ -21,6 +23,7 @@ const ChatContext = createContext<ChatContextType | undefined>(undefined);
 export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
   const [abortController, setAbortController] = useState<AbortController | null>(null);
   const { toast } = useToast();
 
@@ -163,6 +166,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const finalMessages = [...updatedMessages, newMessage];
       setMessages(finalMessages);
       updateCurrentChat(finalMessages);
+      
+      // Start typing animation for the AI response
+      setIsTyping(true);
     } catch (error) {
       console.error('Failed to get AI response:', error);
       toast({
@@ -607,6 +613,7 @@ Please synthesize this information and provide a helpful response that directly 
       setAbortController(null);
     }
     setIsLoading(false);
+    setIsTyping(false);
     toast({
       title: "Generation Stopped",
       description: "AI response generation has been stopped.",
@@ -614,13 +621,25 @@ Please synthesize this information and provide a helpful response that directly 
     });
   }, [abortController, toast]);
 
+  // Stop typing function
+  const stopTyping = useCallback(() => {
+    setIsTyping(false);
+    toast({
+      title: "Typing Stopped",
+      description: "AI message typing has been stopped.",
+      duration: 2000,
+    });
+  }, [toast]);
+
   return (
     <ChatContext.Provider value={{ 
       messages, 
       sendUserMessage,
       searchAndRespond,
-      isLoading, 
+      isLoading,
+      isTyping,
       stopGeneration,
+      stopTyping,
       regenerateLastResponse,
       regenerateResponseAtIndex,
       clearMessages

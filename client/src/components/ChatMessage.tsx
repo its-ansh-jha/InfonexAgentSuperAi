@@ -33,6 +33,7 @@ export function ChatMessage({ message, useTypingAnimation = false }: ChatMessage
   const { role, content } = message;
   const isUser = role === 'user';
   const { toast } = useToast();
+  const { isTyping, stopTyping } = useChat();
   const [copied, setCopied] = useState(false);
 
   // Skip rendering system messages completely
@@ -278,7 +279,19 @@ export function ChatMessage({ message, useTypingAnimation = false }: ChatMessage
               if (!isUser && useTypingAnimation && index === 0) {
                 return (
                   <p key={index} className="whitespace-pre-line">
-                    <TypingAnimation text={part.text} speed={20} />
+                    <TypingAnimation 
+                      text={part.text} 
+                      speed={15}
+                      isTyping={isTyping}
+                      onComplete={() => {
+                        // Typing animation completed, stop the global typing state
+                        stopTyping();
+                      }}
+                      onStop={() => {
+                        // Typing was stopped manually
+                        console.log('Typing stopped manually');
+                      }}
+                    />
                   </p>
                 );
               } else {

@@ -29,7 +29,7 @@ export function ChatInput() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
-  const { sendUserMessage, searchAndRespond, isLoading, stopGeneration } = useChat();
+  const { sendUserMessage, searchAndRespond, isLoading, isTyping, stopGeneration, stopTyping } = useChat();
   const { toast } = useToast();
 
   // Auto-resize textarea on input
@@ -482,16 +482,16 @@ export function ChatInput() {
               </TooltipProvider>
 
               <Button
-                type={isLoading ? "button" : "submit"}
-                onClick={isLoading ? stopGeneration : undefined}
-                disabled={isUploadingImage || (!isLoading && (!input.trim() && imageFiles.length === 0))}
+                type={isLoading || isTyping ? "button" : "submit"}
+                onClick={(isLoading || isTyping) ? (isLoading ? stopGeneration : stopTyping) : undefined}
+                disabled={isUploadingImage || (!(isLoading || isTyping) && (!input.trim() && imageFiles.length === 0))}
                 className={`h-9 w-9 rounded-full text-white shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-all duration-200 ${
-                  isLoading 
+                  (isLoading || isTyping)
                     ? 'bg-muted-foreground hover:bg-muted-foreground/80 animate-pulse' 
                     : 'bg-primary hover:bg-primary/90'
                 }`}
               >
-                {isLoading ? (
+                {(isLoading || isTyping) ? (
                   <Square className="h-4 w-4" />
                 ) : (
                   <Send className="h-5 w-5" />
