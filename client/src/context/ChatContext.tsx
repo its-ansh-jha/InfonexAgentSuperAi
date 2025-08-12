@@ -52,7 +52,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       'covid', 'coronavirus', 'election', 'sports score', 'match result',
       'who won', 'winner', 'score', 'live', 'real time', 'real-time'
     ];
-    
+
     const lowerQuery = query.toLowerCase();
     return realTimeKeywords.some(keyword => lowerQuery.includes(keyword));
   };
@@ -96,7 +96,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (imageFiles && imageFiles.length > 0 && imageDataArray.length > 0) {
       // Create array content format for multiple images
       const contentArray = [];
-      
+
       // Add text content if provided
       if (content.trim()) {
         contentArray.push({
@@ -104,7 +104,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
           text: content
         });
       }
-      
+
       // Add each image
       for (const imageData of imageDataArray) {
         contentArray.push({
@@ -114,7 +114,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         });
       }
-      
+
       messageContent = contentArray;
     }
 
@@ -150,7 +150,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // For other messages, convert to string
           return { ...msg, content: String(msg.content) };
         });
-        
+
         aiResponse = await sendMessage(content, 'gpt-4o', messagesForAPI);
       } else {
         // Regular text-only API call
@@ -166,7 +166,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const finalMessages = [...updatedMessages, newMessage];
       setMessages(finalMessages);
       updateCurrentChat(finalMessages);
-      
+
       // Start typing animation for the AI response
       setIsTyping(true);
     } catch (error) {
@@ -231,7 +231,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const imagePart = userMessage.content.find(item => item.type === 'image');
 
         textContent = textPart?.text || '';
-        
+
         // Handle different image formats - extract base64 from data URL
         if (imageUrlPart && (imageUrlPart as any).image_url?.url) {
           const imageUrl = (imageUrlPart as any).image_url.url;
@@ -378,7 +378,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
                                 searchQuery.toLowerCase().includes('creator');
 
         let refinedPrompt;
-        
+
         if (isDeveloperQuery && searchQuery.toLowerCase().includes('you')) {
           refinedPrompt = `I was developed by Infonex and I am running as a search question refiner using the GPT-4o-mini AI model engine. I help provide real-time information by searching the web and refining the results to give you accurate and up-to-date answers.
 
@@ -554,7 +554,7 @@ Please synthesize this information and provide a helpful response that directly 
                               query.toLowerCase().includes('creator');
 
       let refinedPrompt;
-      
+
       if (isDeveloperQuery && query.toLowerCase().includes('you')) {
         refinedPrompt = `I was developed by Infonex and I am running as a search question refiner using the GPT-4o-mini AI model engine. I help provide real-time information by searching the web and refining the results to give you accurate and up-to-date answers.
 
@@ -632,7 +632,7 @@ Please synthesize this information and provide a helpful response that directly 
       setAbortController(null);
     }
     setIsLoading(false);
-    setIsTyping(false);
+    setIsTyping(false); // Also stop typing animation
     toast({
       title: "Generation Stopped",
       description: "AI response generation has been stopped.",
