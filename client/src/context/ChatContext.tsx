@@ -624,12 +624,7 @@ Please synthesize this information and provide a helpful response that directly 
   // Stop typing function
   const stopTyping = useCallback(() => {
     setIsTyping(false);
-    toast({
-      title: "Typing Stopped",
-      description: "AI message typing has been stopped.",
-      duration: 2000,
-    });
-  }, [toast]);
+  }, []);
 
   return (
     <ChatContext.Provider value={{ 

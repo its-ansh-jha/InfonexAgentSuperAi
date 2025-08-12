@@ -284,12 +284,11 @@ export function ChatMessage({ message, useTypingAnimation = false }: ChatMessage
                       speed={15}
                       isTyping={isTyping}
                       onComplete={() => {
-                        // Typing animation completed, stop the global typing state
+                        // Typing animation completed, stop the global typing state silently
                         stopTyping();
                       }}
                       onStop={() => {
-                        // Typing was stopped manually
-                        console.log('Typing stopped manually');
+                        // Typing was stopped manually, no notification needed
                       }}
                     />
                   </p>
