@@ -5,10 +5,12 @@ This is a sophisticated full-stack AI chat application built with React, Express
 
 ## Project Status
 - **2025-01-12**: Fresh repository cloned and dependencies installed
+- **2025-01-12**: Enhanced image upload functionality with camera capture and photo gallery options
+- **2025-01-12**: Added image preview in chat input area and message display
 - All npm packages successfully installed (514 packages)
 - Build and start scripts configured and ready
 - PostgreSQL database available
-- Ready for user customizations and edits
+- Core features operational and enhanced
 
 ## Scripts Configuration
 - **Development**: `npm run dev` - Runs with tsx and hot reload
@@ -32,7 +34,9 @@ This is a sophisticated full-stack AI chat application built with React, Express
 
 ### Key Features Ready
 - AI chat interface with multiple models
-- Image upload and processing
+- Enhanced image upload with camera capture and photo gallery selection
+- Image preview in chat input area before sending
+- Image display within chat messages
 - Voice input and text-to-speech
 - Mathematical expression rendering
 - Search functionality
@@ -42,7 +46,15 @@ This is a sophisticated full-stack AI chat application built with React, Express
 - Repository: https://github.com/its-ansh-jha/InfonexAgentSuperAi
 - Setup: Clean clone with all dependencies
 - Approach: Configure build/start scripts only, no OpenAI error fixing requested
-- Next: User will request specific edits to implement
+- Image Upload Enhancement: User requested camera capture + photo gallery options with image preview functionality
+
+## Recent Enhancements (2025-01-12)
+- ✅ Added dropdown menu for image upload with two options: "Take Photo" and "Choose from Gallery"
+- ✅ Implemented camera capture using HTML5 `capture="environment"` attribute
+- ✅ Enhanced image preview in chat input area with thumbnail, filename, and status
+- ✅ Added image display functionality in chat messages
+- ✅ Proper memory management for image preview URLs
+- ✅ Mobile-friendly camera access for direct photo capture
 
 ## Next Steps
-Waiting for user to specify what edits and features they want implemented in the application.
+Application ready for user testing and feedback on enhanced image upload functionality.

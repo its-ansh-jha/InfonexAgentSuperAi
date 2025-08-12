@@ -22,6 +22,7 @@ export function ChatInput() {
   const [input, setInput] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageName, setImageName] = useState<string>('');
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string>('');
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [isSearchMode, setIsSearchMode] = useState(false);
@@ -185,6 +186,10 @@ export function ChatInput() {
       setImageName(file.name);
 
       try {
+        // Create preview URL for the image
+        const previewUrl = URL.createObjectURL(file);
+        setImagePreviewUrl(previewUrl);
+
         // Simulate processing time for better UX
         await new Promise(resolve => setTimeout(resolve, 500));
 
@@ -210,8 +215,14 @@ export function ChatInput() {
   };
 
   const removeImage = () => {
+    // Clean up the preview URL to prevent memory leaks
+    if (imagePreviewUrl) {
+      URL.revokeObjectURL(imagePreviewUrl);
+    }
+    
     setImageFile(null);
     setImageName('');
+    setImagePreviewUrl('');
     setIsUploadingImage(false);
 
     // Reset both file inputs
@@ -257,29 +268,47 @@ export function ChatInput() {
 
           {/* Image preview (if uploaded or uploading) */}
           {(imageFile || isUploadingImage) && (
-            <div className="mb-2 flex items-center">
-              <Badge 
-                variant="outline" 
-                className={`bg-neutral-800 text-white border-neutral-700 py-1 pl-2 pr-1 flex items-center gap-1 ${
-                  isUploadingImage ? 'opacity-75' : ''
-                }`}
-              >
-                <Image className={`h-3 w-3 mr-1 ${isUploadingImage ? 'animate-pulse' : ''}`} />
-                <span className="truncate max-w-[150px]">
-                  {isUploadingImage ? `Processing ${imageName}...` : imageName}
-                </span>
+            <div className="mb-3 p-3 bg-neutral-800 rounded-lg border border-neutral-700">
+              <div className="flex items-start gap-3">
+                {imagePreviewUrl && !isUploadingImage && (
+                  <div className="flex-shrink-0">
+                    <img 
+                      src={imagePreviewUrl}
+                      alt="Preview"
+                      className="w-16 h-16 object-cover rounded-lg border border-neutral-600"
+                      data-testid="image-preview"
+                    />
+                  </div>
+                )}
+                {isUploadingImage && (
+                  <div className="flex-shrink-0 w-16 h-16 bg-neutral-700 rounded-lg flex items-center justify-center">
+                    <Image className="h-6 w-6 text-neutral-500 animate-pulse" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Image className={`h-4 w-4 ${isUploadingImage ? 'animate-pulse text-neutral-500' : 'text-primary'}`} />
+                    <span className="text-sm font-medium text-white">
+                      {isUploadingImage ? 'Processing image...' : 'Image ready'}
+                    </span>
+                  </div>
+                  <p className="text-sm text-neutral-400 truncate" data-testid="image-filename">
+                    {imageName}
+                  </p>
+                </div>
                 {!isUploadingImage && (
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
                     onClick={removeImage}
-                    className="h-4 w-4 rounded-full hover:bg-neutral-700 p-0 ml-1"
+                    className="h-8 w-8 rounded-full hover:bg-neutral-700 text-neutral-400 hover:text-white flex-shrink-0"
+                    data-testid="button-remove-image"
                   >
-                    <X className="h-3 w-3" />
+                    <X className="h-4 w-4" />
                   </Button>
                 )}
-              </Badge>
+              </div>
             </div>
           )}
 

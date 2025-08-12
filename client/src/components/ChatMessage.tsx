@@ -40,21 +40,21 @@ export function ChatMessage({ message }: ChatMessageProps) {
 
   // Handle both string and array formats of content
   let contentString: string;
+  let imageData: string | null = null;
 
   if (typeof content === 'string') {
     contentString = content;
   } else if (Array.isArray(content)) {
-    // Convert array content to displayable string
-    contentString = content
-      .map(item => {
-        if (item.type === 'text' && item.text) {
-          return item.text;
-        } else if (item.type === 'image') {
-          return '[Attached image]';
-        }
-        return '';
-      })
-      .join('\n');
+    // Extract image data and text content separately
+    const textParts = [];
+    for (const item of content) {
+      if (item.type === 'text' && item.text) {
+        textParts.push(item.text);
+      } else if (item.type === 'image' && item.image_data) {
+        imageData = item.image_data;
+      }
+    }
+    contentString = textParts.join('\n');
   } else {
     contentString = 'Content could not be displayed';
   }
@@ -224,6 +224,18 @@ export function ChatMessage({ message }: ChatMessageProps) {
         ? 'bg-muted rounded-2xl accent-border p-4 max-w-[85%] shadow-md' 
         : 'bg-neutral-950 dark:bg-neutral-950 rounded-2xl p-4 max-w-[85%] shadow-md border border-neutral-800'}`}
       >
+        {/* Display image if present */}
+        {imageData && (
+          <div className="mb-3">
+            <img 
+              src={`data:image/jpeg;base64,${imageData}`}
+              alt="User uploaded image"
+              className="max-w-full max-h-64 rounded-lg border border-neutral-600 object-contain"
+              data-testid="message-image"
+            />
+          </div>
+        )}
+
         <div className="text-foreground">
           {contentParts.map((part, index) => {
             if (part.isCode) {
