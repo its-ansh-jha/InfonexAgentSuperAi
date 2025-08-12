@@ -11,8 +11,6 @@ interface ChatContextType {
   searchAndRespond: (query: string) => Promise<void>;
   isLoading: boolean;
   isTyping: boolean;
-  stopGeneration: () => void;
-  stopTyping: () => void;
   regenerateLastResponse: () => Promise<void>;
   regenerateResponseAtIndex: (messageIndex: number) => Promise<void>;
   clearMessages: () => void;
@@ -24,7 +22,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
-  const [abortController, setAbortController] = useState<AbortController | null>(null);
   const { toast } = useToast();
 
   // Get current chat from ChatHistoryContext
@@ -190,7 +187,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       updateCurrentChat(finalMessages);
     } finally {
       setIsLoading(false);
-      setAbortController(null);
     }
   }, [messages, toast, updateCurrentChat, systemMessage]);
 
@@ -305,7 +301,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       updateCurrentChat(finalMessages);
     } finally {
       setIsLoading(false);
-      setAbortController(null);
     }
   }, [messages, toast, updateCurrentChat, systemMessage]);
 
@@ -507,7 +502,6 @@ Please synthesize this information and provide a helpful response that directly 
       updateCurrentChat(finalMessages);
     } finally {
       setIsLoading(false);
-      setAbortController(null);
     }
   }, [messages, toast, updateCurrentChat, systemMessage, sendMessage, sendMessageWithImage]);
 
@@ -625,29 +619,8 @@ Please synthesize this information and provide a helpful response that directly 
       updateCurrentChat(finalMessages);
     } finally {
       setIsLoading(false);
-      setAbortController(null);
     }
   }, [messages, toast, updateCurrentChat, systemMessage, isLoading]);
-
-  // Stop generation function
-  const stopGeneration = useCallback(() => {
-    if (abortController) {
-      abortController.abort();
-      setAbortController(null);
-    }
-    setIsLoading(false);
-    setIsTyping(false); // Also stop typing animation
-    toast({
-      title: "Generation Stopped",
-      description: "AI response generation has been stopped.",
-      duration: 2000,
-    });
-  }, [abortController, toast]);
-
-  // Stop typing function
-  const stopTyping = useCallback(() => {
-    setIsTyping(false);
-  }, []);
 
   return (
     <ChatContext.Provider value={{ 
@@ -656,8 +629,6 @@ Please synthesize this information and provide a helpful response that directly 
       searchAndRespond,
       isLoading,
       isTyping,
-      stopGeneration,
-      stopTyping,
       regenerateLastResponse,
       regenerateResponseAtIndex,
       clearMessages
