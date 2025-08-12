@@ -7,6 +7,7 @@ import { generateOpenAIResponse, generateOpenAIMiniResponse } from "./services/o
 import { generateDeepSeekResponse } from "./services/openrouter";
 import { generateMaverickResponse, handleImageUpload } from "./services/openrouter-maverick";
 import { handleSearch } from "./services/search";
+import { documentUpload, handleDocumentUpload } from "./services/documentProcessor";
 import { log } from "./vite";
 import { db } from "./db";
 import { messages, chatSessions } from "@shared/schema";
@@ -43,6 +44,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       log(`Error in image upload endpoint: ${error.message}`, "error");
       return res.status(500).json({ message: error.message || "Error processing image" });
+    }
+  });
+
+  // Document upload and processing endpoint
+  app.post("/api/upload-document", documentUpload.single('document'), async (req, res) => {
+    try {
+      await handleDocumentUpload(req, res);
+    } catch (error: any) {
+      log(`Error in document upload endpoint: ${error.message}`, "error");
+      return res.status(500).json({ message: error.message || "Error processing document" });
     }
   });
   
