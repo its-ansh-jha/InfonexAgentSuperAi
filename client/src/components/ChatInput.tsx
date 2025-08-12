@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect, ChangeEvent } from 'react';
-import { Send, Volume2, ImagePlus, Image, X, Mic, Search, Camera, FolderOpen } from 'lucide-react';
+import { Send, Volume2, ImagePlus, Image, X, Mic, Search, Camera, FolderOpen, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChat } from '@/context/ChatContext';
 import { autoResizeTextarea } from '@/utils/helpers';
@@ -311,9 +311,24 @@ export function ChatInput() {
             <div className="mb-3 p-3 bg-neutral-800 rounded-lg border border-neutral-700">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <Image className={`h-4 w-4 ${isUploadingImage ? 'animate-pulse text-neutral-500' : 'text-primary'}`} />
+                  {isUploadingImage ? (
+                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                  ) : (
+                    <Image className="h-4 w-4 text-primary" />
+                  )}
                   <span className="text-sm font-medium text-white">
-                    {isUploadingImage ? 'Processing images...' : `${imageFiles.length} image${imageFiles.length !== 1 ? 's' : ''} ready`}
+                    {isUploadingImage ? (
+                      <span className="flex items-center gap-2">
+                        Processing images
+                        <div className="typing-dots text-primary">
+                          <div className="typing-dot"></div>
+                          <div className="typing-dot"></div>
+                          <div className="typing-dot"></div>
+                        </div>
+                      </span>
+                    ) : (
+                      `${imageFiles.length} image${imageFiles.length !== 1 ? 's' : ''} ready`
+                    )}
                   </span>
                 </div>
                 {!isUploadingImage && imageFiles.length > 0 && (
@@ -469,15 +484,30 @@ export function ChatInput() {
               <Button
                 type="submit"
                 disabled={isLoading || isUploadingImage || (!input.trim() && imageFiles.length === 0)}
-                className="h-9 w-9 rounded-full bg-primary hover:bg-primary/90 text-white shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                className={`h-9 w-9 rounded-full bg-primary hover:bg-primary/90 text-white shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-all duration-200 ${
+                  isLoading ? 'loading-button animate-pulse-glow' : ''
+                }`}
               >
-                <Send className="h-5 w-5" />
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-5 w-5" />
+                )}
               </Button>
             </div>
           </div>
 
           <div className="text-xs text-neutral-500 text-center mt-1">
-            {isListening ? (
+            {isLoading ? (
+              <span className="text-primary animate-pulse flex items-center justify-center gap-1">
+                <div className="typing-dots">
+                  <div className="typing-dot"></div>
+                  <div className="typing-dot"></div>
+                  <div className="typing-dot"></div>
+                </div>
+                <span className="ml-2">Processing your message...</span>
+              </span>
+            ) : isListening ? (
               <span className="text-red-400">Listening...</span>
             ) : isSearchMode ? (
               <span className="text-blue-400">Search mode: Get realtime data refined by GPT-4o-mini</span>
