@@ -50,7 +50,45 @@ export const ChatHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ c
   // Save chats to localStorage whenever chats change
   useEffect(() => {
     if (chats.length > 0) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(chats));
+      try {
+        // Clean up old chats to prevent storage overflow
+        const maxChats = 10; // Limit to 10 recent chats
+        const recentChats = chats.slice(-maxChats);
+        
+        // Also remove base64 images from older messages to save space
+        const cleanedChats = recentChats.map(chat => ({
+          ...chat,
+          messages: chat.messages.map(msg => {
+            if (Array.isArray(msg.content)) {
+              // Keep text but remove image data to save space in localStorage
+              return {
+                ...msg,
+                content: msg.content.filter(item => item.type === 'text')
+              };
+            }
+            return msg;
+          })
+        }));
+        
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(cleanedChats));
+      } catch (error) {
+        console.warn('Failed to save chat history to localStorage:', error);
+        // Clear localStorage if it's full and try again with minimal data
+        try {
+          localStorage.removeItem(STORAGE_KEY);
+          // Keep only the current chat without image data
+          const minimalChats = chats.slice(-1).map(chat => ({
+            ...chat,
+            messages: chat.messages.map(msg => ({
+              ...msg,
+              content: typeof msg.content === 'string' ? msg.content : 'Message with image'
+            }))
+          }));
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(minimalChats));
+        } catch (fallbackError) {
+          console.error('Failed to save even minimal chat history:', fallbackError);
+        }
+      }
     }
   }, [chats]);
 
