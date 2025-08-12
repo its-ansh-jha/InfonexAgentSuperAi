@@ -10,6 +10,7 @@ interface ChatContextType {
   sendUserMessage: (content: string, imageFiles?: File[]) => Promise<void>;
   searchAndRespond: (query: string) => Promise<void>;
   isLoading: boolean;
+  stopGeneration: () => void;
   regenerateLastResponse: () => Promise<void>;
   regenerateResponseAtIndex: (messageIndex: number) => Promise<void>;
   clearMessages: () => void;
@@ -20,6 +21,7 @@ const ChatContext = createContext<ChatContextType | undefined>(undefined);
 export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [abortController, setAbortController] = useState<AbortController | null>(null);
   const { toast } = useToast();
 
   // Get current chat from ChatHistoryContext
@@ -598,12 +600,27 @@ Please synthesize this information and provide a helpful response that directly 
     }
   }, [messages, toast, updateCurrentChat, systemMessage, isLoading]);
 
+  // Stop generation function
+  const stopGeneration = useCallback(() => {
+    if (abortController) {
+      abortController.abort();
+      setAbortController(null);
+    }
+    setIsLoading(false);
+    toast({
+      title: "Generation Stopped",
+      description: "AI response generation has been stopped.",
+      duration: 2000,
+    });
+  }, [abortController, toast]);
+
   return (
     <ChatContext.Provider value={{ 
       messages, 
       sendUserMessage,
       searchAndRespond,
       isLoading, 
+      stopGeneration,
       regenerateLastResponse,
       regenerateResponseAtIndex,
       clearMessages

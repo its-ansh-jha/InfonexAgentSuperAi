@@ -16,6 +16,7 @@ import { TextToSpeech } from '@/components/TextToSpeech';
 import { extractCodeBlocks } from '@/utils/helpers';
 import { useToast } from '@/hooks/use-toast';
 import { useChat } from '@/context/ChatContext';
+import { TypingAnimation } from '@/components/TypingAnimation';
 import { 
   Tooltip, 
   TooltipContent, 
@@ -25,9 +26,10 @@ import {
 
 interface ChatMessageProps {
   message: Message;
+  useTypingAnimation?: boolean;
 }
 
-export function ChatMessage({ message }: ChatMessageProps) {
+export function ChatMessage({ message, useTypingAnimation = false }: ChatMessageProps) {
   const { role, content } = message;
   const isUser = role === 'user';
   const { toast } = useToast();
@@ -50,9 +52,9 @@ export function ChatMessage({ message }: ChatMessageProps) {
     for (const item of content) {
       if (item.type === 'text' && item.text) {
         textParts.push(item.text);
-      } else if (item.type === 'image_url' && item.image_url?.url) {
+      } else if (item.type === 'image_url' && (item as any).image_url?.url) {
         // Handle image_url format from OpenAI API
-        const url = item.image_url.url;
+        const url = (item as any).image_url.url;
         if (url.startsWith('data:image')) {
           images.push(url);
         }
@@ -272,7 +274,16 @@ export function ChatMessage({ message }: ChatMessageProps) {
                 </span>
               );
             } else {
-              return <p key={index} className="whitespace-pre-line">{part.text}</p>;
+              // Use typing animation for assistant messages and text content
+              if (!isUser && useTypingAnimation && index === 0) {
+                return (
+                  <p key={index} className="whitespace-pre-line">
+                    <TypingAnimation text={part.text} speed={20} />
+                  </p>
+                );
+              } else {
+                return <p key={index} className="whitespace-pre-line">{part.text}</p>;
+              }
             }
           })}
         </div>

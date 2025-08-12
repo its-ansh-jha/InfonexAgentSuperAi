@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect, ChangeEvent } from 'react';
-import { Send, Volume2, ImagePlus, Image, X, Mic, Search, Camera, FolderOpen, Loader2 } from 'lucide-react';
+import { Send, Volume2, ImagePlus, Image, X, Mic, Search, Camera, FolderOpen, Loader2, Square } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChat } from '@/context/ChatContext';
 import { autoResizeTextarea } from '@/utils/helpers';
@@ -29,7 +29,7 @@ export function ChatInput() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
-  const { sendUserMessage, searchAndRespond, isLoading } = useChat();
+  const { sendUserMessage, searchAndRespond, isLoading, stopGeneration } = useChat();
   const { toast } = useToast();
 
   // Auto-resize textarea on input
@@ -482,14 +482,15 @@ export function ChatInput() {
               </TooltipProvider>
 
               <Button
-                type="submit"
-                disabled={isLoading || isUploadingImage || (!input.trim() && imageFiles.length === 0)}
+                type={isLoading ? "button" : "submit"}
+                onClick={isLoading ? stopGeneration : undefined}
+                disabled={isUploadingImage || (!isLoading && (!input.trim() && imageFiles.length === 0))}
                 className={`h-9 w-9 rounded-full bg-primary hover:bg-primary/90 text-white shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-all duration-200 ${
-                  isLoading ? 'loading-button animate-pulse-glow' : ''
+                  isLoading ? 'bg-red-500 hover:bg-red-600 animate-pulse' : ''
                 }`}
               >
                 {isLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Square className="h-4 w-4" />
                 ) : (
                   <Send className="h-5 w-5" />
                 )}

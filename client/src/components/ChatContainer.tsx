@@ -29,9 +29,21 @@ export function ChatContainer() {
         {/* Subtle indicator line */}
         <div className="absolute top-0 left-0 w-[2px] h-full bg-primary bg-opacity-10"></div>
         
-        {messages.map((message, index) => (
-          <ChatMessage key={index} message={message} />
-        ))}
+        {messages.map((message, index) => {
+          // Use typing animation for the last AI message if it's recent
+          const useTyping = !isLoading && 
+                           message.role === 'assistant' && 
+                           index === messages.length - 1 && 
+                           messages.length > 1;
+          
+          return (
+            <ChatMessage 
+              key={index} 
+              message={message} 
+              useTypingAnimation={useTyping}
+            />
+          );
+        })}
         
         {isLoading && (
           <div className="flex items-start space-x-3 animate-fade-in">
