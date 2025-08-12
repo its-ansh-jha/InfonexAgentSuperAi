@@ -190,6 +190,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       updateCurrentChat(finalMessages);
     } finally {
       setIsLoading(false);
+      setAbortController(null);
     }
   }, [messages, toast, updateCurrentChat, systemMessage]);
 
@@ -304,6 +305,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       updateCurrentChat(finalMessages);
     } finally {
       setIsLoading(false);
+      setAbortController(null);
     }
   }, [messages, toast, updateCurrentChat, systemMessage]);
 
@@ -505,6 +507,7 @@ Please synthesize this information and provide a helpful response that directly 
       updateCurrentChat(finalMessages);
     } finally {
       setIsLoading(false);
+      setAbortController(null);
     }
   }, [messages, toast, updateCurrentChat, systemMessage, sendMessage, sendMessageWithImage]);
 
@@ -622,6 +625,7 @@ Please synthesize this information and provide a helpful response that directly 
       updateCurrentChat(finalMessages);
     } finally {
       setIsLoading(false);
+      setAbortController(null);
     }
   }, [messages, toast, updateCurrentChat, systemMessage, isLoading]);
 

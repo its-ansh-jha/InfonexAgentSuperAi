@@ -42,11 +42,12 @@ export async function sendMessageWithImage(
   content: string,
   imageData: string | null,
   model: 'gpt-4o' | 'gpt-4o-mini' | 'llama-4-maverick',
-  messages: Message[]
+  messages: Message[],
+  signal?: AbortSignal
 ): Promise<Message> {
   try {
     let messageContent: MessageContent;
-    
+
     // If there's an image, create a multimodal message
     if (imageData) {
       messageContent = [
@@ -56,32 +57,33 @@ export async function sendMessageWithImage(
     } else {
       messageContent = content;
     }
-    
+
     // Convert messages for API format
-    const apiMessages = messages.map(({ role, content }) => ({ 
-      role, 
-      content 
+    const apiMessages = messages.map(({ role, content }) => ({
+      role,
+      content
     }));
-    
+
     // Add the new message with possibly multimodal content
     const newMessage = {
       role: 'user' as const,
       content: messageContent
     };
-    
+
     // Use the improved apiRequest function
     const data = await apiRequest<{
       message: { role: 'user' | 'assistant' | 'system'; content: string };
       model: string;
     }>({
-      url: '/api/chat',
+      url: '/api/chat-with-image',
       method: 'POST',
       data: {
         model: model,
         messages: [...apiMessages, newMessage],
       },
+      signal,
     });
-    
+
     return {
       role: data.message.role as 'user' | 'assistant' | 'system',
       content: data.message.content,
@@ -97,7 +99,8 @@ export async function sendMessageWithImage(
 export async function sendMessage(
   content: string,
   model: 'gpt-4o' | 'gpt-4o-mini' | 'llama-4-maverick',
-  messages: Message[]
+  messages: Message[],
+  signal?: AbortSignal
 ): Promise<Message> {
   try {
     // Use the improved apiRequest function
@@ -111,8 +114,9 @@ export async function sendMessage(
         model: model,
         messages: messages.map(({ role, content }) => ({ role, content })),
       },
+      signal,
     });
-    
+
     return {
       role: data.message.role as 'user' | 'assistant' | 'system',
       content: data.message.content,
