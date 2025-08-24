@@ -3,6 +3,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { z } from "zod";
 import { chatCompletionRequestSchema, insertMessageSchema, insertChatSessionSchema, images, pdfs } from "@shared/schema";
+import { messageStorage } from "./services/message-storage";
 import { generateOpenAIResponse, generateOpenAIMiniResponse } from "./services/openai";
 import { generateDeepSeekResponse } from "./services/openrouter";
 import { generateMaverickResponse, handleImageUpload } from "./services/openrouter-maverick";
@@ -113,6 +114,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: 'Failed to serve PDF' });
     }
   });
+
+  // Message storage endpoints
+  app.post("/api/chat-sessions", async (req, res) => {
+    try {
+      const { title } = req.body;
+      const sessionId = await messageStorage.createChatSession(title);
+      res.json({ sessionId });
+    } catch (error: any) {
+      log(`Error creating chat session: ${error.message}`, "error");
+      res.status(500).json({ error: 'Failed to create chat session' });
+    }
+  });
+
+  app.get("/api/chat-sessions", async (req, res) => {
+    try {
+      const sessions = await messageStorage.getChatSessions();
+      res.json(sessions);
+    } catch (error: any) {
+      log(`Error fetching chat sessions: ${error.message}`, "error");
+      res.status(500).json({ error: 'Failed to fetch chat sessions' });
+    }
+  });
+
+  app.get("/api/chat-sessions/:sessionId/messages", async (req, res) => {
+    try {
+      const { sessionId } = req.params;
+      const messages = await messageStorage.getChatMessages(sessionId);
+      res.json(messages);
+    } catch (error: any) {
+      log(`Error fetching messages: ${error.message}`, "error");
+      res.status(500).json({ error: 'Failed to fetch messages' });
+    }
+  });
+
+  app.post("/api/chat-sessions/:sessionId/messages", async (req, res) => {
+    try {
+      const { sessionId } = req.params;
+      const { role, content, model, messageType } = req.body;
+      
+      await messageStorage.saveMessage(sessionId, role, content, model, messageType);
+      res.json({ success: true });
+    } catch (error: any) {
+      log(`Error saving message: ${error.message}`, "error");
+      res.status(500).json({ error: 'Failed to save message' });
+    }
+  });
+
+  app.put("/api/chat-sessions/:sessionId", async (req, res) => {
+    try {
+      const { sessionId } = req.params;
+      const { title } = req.body;
+      
+      await messageStorage.updateChatSession(sessionId, title);
+      res.json({ success: true });
+    } catch (error: any) {
+      log(`Error updating chat session: ${error.message}`, "error");
+      res.status(500).json({ error: 'Failed to update chat session' });
+    }
+  });
   
   // Chat completion endpoint
   app.post("/api/chat", async (req, res) => {
@@ -129,6 +189,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const chatRequest = validationResult.data;
       let response;
+
+      // Save user message to database if sessionId is provided
+      if (chatRequest.sessionId) {
+        const userMessage = chatRequest.messages[chatRequest.messages.length - 1];
+        if (userMessage.role === 'user') {
+          await messageStorage.saveMessage(
+            chatRequest.sessionId, 
+            'user', 
+            userMessage.content, 
+            chatRequest.model,
+            'user_message'
+          );
+        }
+      }
       
       // Route to appropriate model
       if (chatRequest.model === "gpt-4o") {
@@ -191,37 +265,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       log(`Model ${chatRequest.model} response: ${previewContent}...`);
       
-      // Store messages in the database if sessionId is provided
-      if (chatRequest.sessionId) {
+      // Save assistant response to database if sessionId is provided  
+      if (chatRequest.sessionId && formattedResponse) {
         try {
-          // First, store the user message
-          const lastUserMessage = chatRequest.messages[chatRequest.messages.length - 1];
-          if (lastUserMessage.role === 'user') {
-            await db.insert(messages).values({
-              role: lastUserMessage.role,
-              content: typeof lastUserMessage.content === 'string' 
-                ? lastUserMessage.content 
-                : JSON.stringify(lastUserMessage.content),
-              model: chatRequest.model,
-              sessionId: parseInt(chatRequest.sessionId)
-            });
-          }
-          
-          // Then store the assistant's response
-          await db.insert(messages).values({
-            role: formattedResponse.message.role,
-            content: formattedResponse.message.content,
-            model: formattedResponse.model,
-            sessionId: parseInt(chatRequest.sessionId)
-          });
-          
-          // Update the chat session's updatedAt timestamp
-          await db
-            .update(chatSessions)
-            .set({ updatedAt: new Date() })
-            .where(eq(chatSessions.id, parseInt(chatRequest.sessionId)));
+          await messageStorage.saveMessage(
+            chatRequest.sessionId,
+            'assistant',
+            formattedResponse.message.content,
+            formattedResponse.model,
+            'assistant_response'
+          );
         } catch (dbError: any) {
-          log(`Error storing messages in database: ${dbError.message}`, "error");
+          log(`Error storing assistant message in database: ${dbError.message}`, "error");
           // Continue with the response even if database storage fails
         }
       }

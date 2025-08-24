@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, timestamp, json } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, timestamp, json, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -36,14 +36,21 @@ export const insertChatSessionSchema = createInsertSchema(chatSessions).omit({
 export type InsertChatSession = z.infer<typeof insertChatSessionSchema>;
 export type ChatSession = typeof chatSessions.$inferSelect;
 
-// Chat Messages Schema
+// Chat Messages Schema - Updated to match existing database structure
 export const messages = pgTable("messages", {
   id: serial("id").primaryKey(),
-  role: text("role").notNull(), // user, assistant, system
-  content: text("content").notNull(),
-  model: text("model").notNull(), // gpt-4o-mini, deepseek-r1
+  fromUser: text("from_user"),
+  toUser: text("to_user"),
+  content: text("content").notNull(), // JSON string for multimodal content
+  isAiGenerated: boolean("is_ai_generated").default(false),
   timestamp: timestamp("timestamp").notNull().defaultNow(),
-  sessionId: integer("session_id").references(() => chatSessions.id).notNull(),
+  messageType: text("message_type"),
+  fileName: text("file_name"),
+  fileSize: integer("file_size"),
+  mimeType: text("mime_type"),
+  role: text("role").notNull(), // user, assistant, system
+  model: text("model"), // gpt-4o, deepseek-r1, etc.
+  sessionId: integer("session_id").references(() => chatSessions.id),
 });
 
 export const insertMessageSchema = createInsertSchema(messages).omit({
@@ -79,6 +86,7 @@ const textContentSchema = z.object({
 // Request schema for chat completions
 export const chatCompletionRequestSchema = z.object({
   model: z.enum(["gpt-4o", "gpt-4o-mini", "deepseek-r1", "llama-4-maverick"]),
+  sessionId: z.string().optional(),
   messages: z.array(
     z.object({
       role: z.enum(["user", "assistant", "system"]),

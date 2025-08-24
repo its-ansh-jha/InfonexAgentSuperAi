@@ -81,14 +81,14 @@ export async function sendMessageWithImage(
         model: model,
         messages: [...apiMessages, newMessage],
       },
-      signal,
     });
 
     return {
+      id: Date.now().toString(),
       role: data.message.role as 'user' | 'assistant' | 'system',
       content: data.message.content,
       model,
-      timestamp: new Date().toISOString(),
+      timestamp: new Date(),
     };
   } catch (error) {
     console.error('Error sending message with image:', error);
@@ -100,7 +100,8 @@ export async function sendMessage(
   content: string,
   model: 'gpt-4o' | 'gpt-4o-mini' | 'llama-4-maverick',
   messages: Message[],
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  sessionId?: string | null
 ): Promise<Message> {
   try {
     // Use the improved apiRequest function
@@ -112,16 +113,17 @@ export async function sendMessage(
       method: 'POST',
       data: {
         model: model,
+        sessionId: sessionId,
         messages: messages.map(({ role, content }) => ({ role, content })),
       },
-      signal,
     });
 
     return {
+      id: Date.now().toString(),
       role: data.message.role as 'user' | 'assistant' | 'system',
       content: data.message.content,
       model: model,
-      timestamp: new Date().toISOString(),
+      timestamp: new Date(),
     };
   } catch (error) {
     console.error('Error sending message:', error);
