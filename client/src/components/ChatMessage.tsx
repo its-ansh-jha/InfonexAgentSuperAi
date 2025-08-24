@@ -57,7 +57,7 @@ export function ChatMessage({ message, useTypingAnimation = false }: ChatMessage
       } else if (item.type === 'image_url' && (item as any).image_url?.url) {
         // Handle image_url format from OpenAI API
         const url = (item as any).image_url.url;
-        if (url.startsWith('data:image')) {
+        if (url.startsWith('data:image') || url.startsWith('https://')) {
           images.push(url);
         }
       } else if (item.type === 'image' && item.image_data) {
