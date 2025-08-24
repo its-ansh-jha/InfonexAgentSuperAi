@@ -1,14 +1,66 @@
 import OpenAI from "openai";
-import { ChatCompletionRequest, ChatCompletionResponse, insertImageSchema } from "@shared/schema";
+import { ChatCompletionRequest, ChatCompletionResponse, insertImageSchema, insertPdfSchema } from "@shared/schema";
 import { log } from "../vite";
 import { searchOpenAIEnhanced } from "./search";
 import { searchSerper } from "./serper";
 import { db } from "../db";
-import { images } from "@shared/schema";
+import { images, pdfs } from "@shared/schema";
 import { nanoid } from "nanoid";
+import PDFDocument from "pdfkit";
 
 // Use the latest OpenAI model with vision support
 const MODEL = "gpt-4o";
+
+/**
+ * Generate and store a PDF document in the database
+ */
+async function generateAndStorePdf(title: string, content: string): Promise<{ id: number }> {
+  try {
+    // Create a new PDF document
+    const doc = new PDFDocument();
+    const chunks: Buffer[] = [];
+    
+    // Collect the PDF data
+    doc.on('data', (chunk) => chunks.push(chunk));
+    
+    // Wait for the PDF to finish
+    const pdfPromise = new Promise<Buffer>((resolve) => {
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+    });
+    
+    // Add content to PDF
+    doc.fontSize(16).text(title, { align: 'center' });
+    doc.moveDown(2);
+    doc.fontSize(12).text(content, { width: 410, align: 'left' });
+    
+    // Finalize the PDF
+    doc.end();
+    
+    // Wait for PDF generation to complete
+    const pdfBuffer = await pdfPromise;
+    
+    // Convert to base64
+    const base64Data = pdfBuffer.toString('base64');
+    
+    // Generate a unique filename
+    const filename = `generated-${nanoid()}.pdf`;
+    
+    // Store in database
+    const [storedPdf] = await db.insert(pdfs).values({
+      title: title,
+      filename: filename,
+      content: content,
+      pdfData: base64Data
+    }).returning({ id: pdfs.id });
+    
+    log(`PDF stored successfully with ID: ${storedPdf.id}`);
+    return storedPdf;
+    
+  } catch (error: any) {
+    log(`Failed to generate and store PDF: ${error.message}`, "error");
+    throw error;
+  }
+}
 
 /**
  * Download an image from a URL and store it in the database
@@ -126,6 +178,27 @@ const availableTools = [
         required: ["prompt"]
       }
     }
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "generate_pdf",
+      description: "Generate PDF documents from text content. Use this when the user asks for documents, reports, formatted text, or wants to download content as PDF.",
+      parameters: {
+        type: "object",
+        properties: {
+          title: {
+            type: "string",
+            description: "Title of the PDF document"
+          },
+          content: {
+            type: "string",
+            description: "Main text content to include in the PDF"
+          }
+        },
+        required: ["title", "content"]
+      }
+    }
   }
 ];
 
@@ -205,6 +278,28 @@ async function executeToolCall(functionName: string, args: any): Promise<string>
           return JSON.stringify({
             error: "Failed to generate image",
             message: imageError.message || "Image generation is temporarily unavailable"
+          });
+        }
+      
+      case "generate_pdf":
+        log(`Executing PDF generation: ${args.title}`);
+        try {
+          const pdfStorageResult = await generateAndStorePdf(args.title, args.content);
+          
+          // Return with special format that includes stored PDF ID
+          return JSON.stringify({
+            type: "pdf_generation_result",
+            pdf_id: pdfStorageResult.id,
+            pdf_url: `/api/pdfs/${pdfStorageResult.id}`,
+            title: args.title,
+            message: `I've generated a PDF document titled "${args.title}" for you. You can view and download it using the link below.`,
+            display_pdf: true
+          });
+        } catch (pdfError: any) {
+          log(`PDF generation error: ${pdfError.message}`, "error");
+          return JSON.stringify({
+            error: "Failed to generate PDF",
+            message: pdfError.message || "PDF generation is temporarily unavailable"
           });
         }
       
@@ -369,6 +464,16 @@ export async function generateOpenAIResponse(
         }
       });
 
+      // Check if any tool result contains PDF generation
+      const pdfGenerationResult = toolMessages.find(msg => {
+        try {
+          const result = JSON.parse(msg.content);
+          return result.type === "pdf_generation_result" && result.display_pdf;
+        } catch {
+          return false;
+        }
+      });
+
       if (imageGenerationResult) {
         // Handle image generation specially
         const result = JSON.parse(imageGenerationResult.content);
@@ -387,6 +492,30 @@ export async function generateOpenAIResponse(
                 image_url: {
                   url: result.image_url
                 }
+              }
+            ] as any
+          },
+          model: MODEL,
+        };
+      }
+
+      if (pdfGenerationResult) {
+        // Handle PDF generation specially
+        const result = JSON.parse(pdfGenerationResult.content);
+        
+        // Return multimodal content with PDF link and text
+        return {
+          message: {
+            role: "assistant",
+            content: [
+              {
+                type: "text",
+                text: result.message
+              },
+              {
+                type: "pdf_link",
+                pdf_url: result.pdf_url,
+                title: result.title
               }
             ] as any
           },

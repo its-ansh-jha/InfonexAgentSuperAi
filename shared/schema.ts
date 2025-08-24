@@ -122,3 +122,21 @@ export const insertImageSchema = createInsertSchema(images).omit({
 
 export type InsertImage = z.infer<typeof insertImageSchema>;
 export type Image = typeof images.$inferSelect;
+
+// PDFs table for storing generated PDFs
+export const pdfs = pgTable("pdfs", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  filename: text("filename").notNull(),
+  content: text("content").notNull(), // The text content used to generate the PDF
+  pdfData: text("pdf_data").notNull(), // Base64 encoded PDF data
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertPdfSchema = createInsertSchema(pdfs).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertPdf = z.infer<typeof insertPdfSchema>;
+export type Pdf = typeof pdfs.$inferSelect;

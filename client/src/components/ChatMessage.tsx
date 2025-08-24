@@ -7,7 +7,9 @@ import {
   Copy, 
   RefreshCw, 
   Check,
-  Download
+  Download,
+  FileText,
+  ExternalLink
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import logoImage from '../assets/logo.webp';
@@ -45,11 +47,12 @@ export function ChatMessage({ message, useTypingAnimation = false }: ChatMessage
   // Handle both string and array formats of content
   let contentString: string;
   let images: string[] = [];
+  let pdfLinks: Array<{url: string, title: string}> = [];
 
   if (typeof content === 'string') {
     contentString = content;
   } else if (Array.isArray(content)) {
-    // Extract image data and text content separately
+    // Extract image data, PDF links, and text content separately
     const textParts = [];
     for (const item of content) {
       if (item.type === 'text' && item.text) {
@@ -63,6 +66,12 @@ export function ChatMessage({ message, useTypingAnimation = false }: ChatMessage
       } else if (item.type === 'image' && item.image_data) {
         // Handle legacy image_data format
         images.push(`data:image/jpeg;base64,${item.image_data}`);
+      } else if (item.type === 'pdf_link' && (item as any).pdf_url) {
+        // Handle PDF link format
+        pdfLinks.push({
+          url: (item as any).pdf_url,
+          title: (item as any).title || 'Generated PDF'
+        });
       }
     }
     contentString = textParts.join('\n');
@@ -309,6 +318,61 @@ export function ChatMessage({ message, useTypingAnimation = false }: ChatMessage
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Display PDF links if present */}
+        {pdfLinks.length > 0 && (
+          <div className="mb-3">
+            {pdfLinks.map((pdfLink, index) => (
+              <div key={index} className="p-3 border border-neutral-600 rounded-lg bg-neutral-900">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <FileText className="h-5 w-5 text-blue-400" />
+                    <span className="text-sm font-medium">{pdfLink.title}</span>
+                  </div>
+                  <div className="flex space-x-2">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => window.open(pdfLink.url, '_blank')}
+                            className="h-8 text-xs"
+                          >
+                            <ExternalLink className="h-3 w-3 mr-1" />
+                            View
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom">
+                          <p>Open PDF in new tab</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => downloadImage(pdfLink.url, pdfLink.title + '.pdf')}
+                            className="h-8 text-xs"
+                          >
+                            <Download className="h-3 w-3 mr-1" />
+                            Download
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom">
+                          <p>Download PDF</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         )}
 

@@ -2,7 +2,7 @@ import { searchOpenAIEnhanced } from './services/search';
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { z } from "zod";
-import { chatCompletionRequestSchema, insertMessageSchema, insertChatSessionSchema, images } from "@shared/schema";
+import { chatCompletionRequestSchema, insertMessageSchema, insertChatSessionSchema, images, pdfs } from "@shared/schema";
 import { generateOpenAIResponse, generateOpenAIMiniResponse } from "./services/openai";
 import { generateDeepSeekResponse } from "./services/openrouter";
 import { generateMaverickResponse, handleImageUpload } from "./services/openrouter-maverick";
@@ -77,6 +77,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       log(`Error serving image: ${error.message}`, "error");
       res.status(500).json({ error: 'Failed to serve image' });
+    }
+  });
+
+  // PDF serving endpoint
+  app.get("/api/pdfs/:id", async (req, res) => {
+    try {
+      const pdfId = parseInt(req.params.id);
+      
+      if (isNaN(pdfId)) {
+        return res.status(400).json({ error: 'Invalid PDF ID' });
+      }
+      
+      // Get PDF from database
+      const [pdf] = await db.select().from(pdfs).where(eq(pdfs.id, pdfId));
+      
+      if (!pdf) {
+        return res.status(404).json({ error: 'PDF not found' });
+      }
+      
+      // Convert base64 back to buffer
+      const pdfBuffer = Buffer.from(pdf.pdfData, 'base64');
+      
+      // Set appropriate headers
+      res.set({
+        'Content-Type': 'application/pdf',
+        'Content-Length': pdfBuffer.length.toString(),
+        'Content-Disposition': `inline; filename="${pdf.filename}"`,
+        'Cache-Control': 'public, max-age=31536000' // Cache for 1 year since PDFs are immutable
+      });
+      
+      res.send(pdfBuffer);
+    } catch (error: any) {
+      log(`Error serving PDF: ${error.message}`, "error");
+      res.status(500).json({ error: 'Failed to serve PDF' });
     }
   });
   
