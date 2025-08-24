@@ -523,7 +523,7 @@ export async function generateOpenAIResponse(
         };
       }
 
-      // Get final response after tool execution for non-image cases
+      // Get final response after tool execution - allow for additional tool calls
       const finalResponse = await openai.chat.completions.create({
         model: MODEL,
         messages: updatedMessages,
@@ -531,10 +531,119 @@ export async function generateOpenAIResponse(
         tool_choice: "auto"
       });
       
+      const finalMessage = finalResponse.choices[0].message;
+      
+      // Check if AI wants to make more tool calls (e.g., PDF generation after web search)
+      if (finalMessage.tool_calls && finalMessage.tool_calls.length > 0) {
+        log(`AI requested ${finalMessage.tool_calls.length} additional tool call(s)`);
+        
+        // Execute additional tool calls
+        const additionalToolMessages = [];
+        
+        for (const toolCall of finalMessage.tool_calls) {
+          const functionName = toolCall.function.name;
+          const functionArgs = JSON.parse(toolCall.function.arguments || '{}');
+          
+          const toolResult = await executeToolCall(functionName, functionArgs);
+          
+          additionalToolMessages.push({
+            role: "tool" as const,
+            content: toolResult,
+            tool_call_id: toolCall.id
+          });
+        }
+        
+        // Check for special tool results in the second round
+        const secondRoundImageResult = additionalToolMessages.find(msg => {
+          try {
+            const result = JSON.parse(msg.content);
+            return result.type === "image_generation_result" && result.display_image;
+          } catch {
+            return false;
+          }
+        });
+
+        const secondRoundPdfResult = additionalToolMessages.find(msg => {
+          try {
+            const result = JSON.parse(msg.content);
+            return result.type === "pdf_generation_result" && result.display_pdf;
+          } catch {
+            return false;
+          }
+        });
+
+        if (secondRoundImageResult) {
+          const result = JSON.parse(secondRoundImageResult.content);
+          return {
+            message: {
+              role: "assistant",
+              content: [
+                {
+                  type: "text",
+                  text: result.message
+                },
+                {
+                  type: "image_url",
+                  image_url: {
+                    url: result.image_url
+                  }
+                }
+              ] as any
+            },
+            model: MODEL,
+          };
+        }
+
+        if (secondRoundPdfResult) {
+          const result = JSON.parse(secondRoundPdfResult.content);
+          return {
+            message: {
+              role: "assistant",
+              content: [
+                {
+                  type: "text",
+                  text: result.message
+                },
+                {
+                  type: "pdf_link",
+                  pdf_url: result.pdf_url,
+                  title: result.title
+                }
+              ] as any
+            },
+            model: MODEL,
+          };
+        }
+
+        // If no special results, get final response after second round
+        const secondFinalMessages = [
+          ...updatedMessages,
+          {
+            role: "assistant",
+            content: finalMessage.content,
+            tool_calls: finalMessage.tool_calls
+          },
+          ...additionalToolMessages
+        ];
+
+        const secondFinalResponse = await openai.chat.completions.create({
+          model: MODEL,
+          messages: secondFinalMessages,
+        });
+
+        return {
+          message: {
+            role: "assistant",
+            content: secondFinalResponse.choices[0].message.content || "I've completed your request using multiple tools.",
+          },
+          model: MODEL,
+        };
+      }
+      
       return {
         message: {
           role: "assistant",
-          content: finalResponse.choices[0].message.content || "I used some tools to help answer your question.",
+          content: finalMessage.content || "I used some tools to help answer your question.",
         },
         model: MODEL,
       };
