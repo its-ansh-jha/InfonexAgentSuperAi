@@ -183,7 +183,7 @@ const availableTools = [
     type: "function" as const,
     function: {
       name: "generate_pdf",
-      description: "Generate PDF documents from text content. Use this when the user asks for documents, reports, formatted text, or wants to download content as PDF.",
+      description: "Generate PDF documents from text content. Use this when the user asks for documents, reports, formatted text, PDFs, or wants to download content as PDF. IMPORTANT: If you have search results or gathered information that should be formatted into a PDF document, use this tool immediately after gathering the information.",
       parameters: {
         type: "object",
         properties: {
@@ -226,14 +226,18 @@ async function executeToolCall(functionName: string, args: any): Promise<string>
       case "web_search":
         log(`Executing web search: ${args.query}`);
         const searchResults = await searchSerper(args.query);
-        return JSON.stringify({
+        const formattedResults = {
           search_results: searchResults.organic?.slice(0, 5).map((result: any) => ({
             title: result.title,
             snippet: result.snippet,
             url: result.link
           })) || [],
-          query: args.query
-        });
+          query: args.query,
+          summary: searchResults.organic?.slice(0, 5).map((result: any) => 
+            `${result.title}: ${result.snippet}`
+          ).join('\n\n') || ""
+        };
+        return JSON.stringify(formattedResults);
       
       case "file_search":
         log(`Executing file search: ${args.query}`);
