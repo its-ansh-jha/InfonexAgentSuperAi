@@ -55,15 +55,32 @@ export const ChatHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ c
         const maxChats = 10; // Limit to 10 recent chats
         const recentChats = chats.slice(-maxChats);
         
-        // Also remove base64 images from older messages to save space
+        // Preserve multimodal content but compress large base64 images for storage
         const cleanedChats = recentChats.map(chat => ({
           ...chat,
           messages: chat.messages.map(msg => {
             if (Array.isArray(msg.content)) {
-              // Keep text but remove image data to save space in localStorage
+              // Keep all content types but handle images smartly
               return {
                 ...msg,
-                content: msg.content.filter(item => item.type === 'text')
+                content: msg.content.map(item => {
+                  if (item.type === 'image_url' && (item as any).image_url?.url) {
+                    const url = (item as any).image_url.url;
+                    // Keep HTTPS URLs (AI-generated images) but mark base64 for potential removal
+                    if (url.startsWith('https://')) {
+                      return item; // Keep AI-generated image URLs
+                    } else if (url.startsWith('data:image')) {
+                      // For large base64 images, replace with placeholder but keep structure
+                      return {
+                        ...item,
+                        image_url: {
+                          url: '[Large uploaded image - temporarily removed to save storage]'
+                        }
+                      };
+                    }
+                  }
+                  return item; // Keep all other content types (text, etc.)
+                })
               };
             }
             return msg;
@@ -76,13 +93,49 @@ export const ChatHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ c
         // Clear localStorage if it's full and try again with minimal data
         try {
           localStorage.removeItem(STORAGE_KEY);
-          // Keep only the current chat without image data
+          // Keep only the current chat with minimal content
           const minimalChats = chats.slice(-1).map(chat => ({
             ...chat,
-            messages: chat.messages.map(msg => ({
-              ...msg,
-              content: typeof msg.content === 'string' ? msg.content : 'Message with image'
-            }))
+            messages: chat.messages.map(msg => {
+              if (typeof msg.content === 'string') {
+                return msg;
+              } else if (Array.isArray(msg.content)) {
+                // Keep structure but minimize content
+                const hasText = msg.content.some(item => item.type === 'text');
+                const hasImage = msg.content.some(item => item.type === 'image_url');
+                
+                if (hasText && hasImage) {
+                  return {
+                    ...msg,
+                    content: msg.content.map(item => {
+                      if (item.type === 'text') return item;
+                      if (item.type === 'image_url') {
+                        return {
+                          type: 'image_url',
+                          image_url: { url: '[Image content temporarily removed to save storage]' }
+                        };
+                      }
+                      return item;
+                    })
+                  };
+                } else if (hasText) {
+                  return {
+                    ...msg,
+                    content: msg.content.filter(item => item.type === 'text')
+                  };
+                } else {
+                  return {
+                    ...msg,
+                    content: 'Multimodal message content'
+                  };
+                }
+              } else {
+                return {
+                  ...msg,
+                  content: 'Unable to preserve message content'
+                };
+              }
+            })
           }));
           localStorage.setItem(STORAGE_KEY, JSON.stringify(minimalChats));
         } catch (fallbackError) {
