@@ -174,10 +174,9 @@ async function executeToolCall(functionName: string, args: any): Promise<string>
         log(`Executing image generation: ${args.prompt}`);
         try {
           const imageResponse = await openai.images.generate({
-            model: "dall-e-3",
+            model: "dall-e-2",
             prompt: args.prompt,
             size: args.size || "1024x1024",
-            quality: args.quality || "standard",
             n: 1
           });
           
