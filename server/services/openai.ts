@@ -1,11 +1,54 @@
 import OpenAI from "openai";
-import { ChatCompletionRequest, ChatCompletionResponse } from "@shared/schema";
+import { ChatCompletionRequest, ChatCompletionResponse, insertImageSchema } from "@shared/schema";
 import { log } from "../vite";
 import { searchOpenAIEnhanced } from "./search";
 import { searchSerper } from "./serper";
+import { db } from "../db";
+import { images } from "@shared/schema";
+import { nanoid } from "nanoid";
 
 // Use the latest OpenAI model with vision support
 const MODEL = "gpt-4o";
+
+/**
+ * Download an image from a URL and store it in the database
+ */
+async function downloadAndStoreImage(imageUrl: string, prompt?: string): Promise<{ id: number }> {
+  try {
+    // Download the image
+    const response = await fetch(imageUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to download image: ${response.statusText}`);
+    }
+    
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    
+    // Convert to base64
+    const base64Data = buffer.toString('base64');
+    const mimeType = response.headers.get('content-type') || 'image/png';
+    
+    // Generate a unique filename
+    const extension = mimeType.split('/')[1] || 'png';
+    const filename = `generated-${nanoid()}.${extension}`;
+    
+    // Store in database
+    const [storedImage] = await db.insert(images).values({
+      originalUrl: imageUrl,
+      filename: filename,
+      mimeType: mimeType,
+      imageData: base64Data,
+      prompt: prompt || null
+    }).returning({ id: images.id });
+    
+    log(`Image stored successfully with ID: ${storedImage.id}`);
+    return storedImage;
+    
+  } catch (error: any) {
+    log(`Failed to download and store image: ${error.message}`, "error");
+    throw error;
+  }
+}
 
 // Initialize OpenAI client for GPT-4o
 const openai = new OpenAI({
@@ -138,12 +181,22 @@ async function executeToolCall(functionName: string, args: any): Promise<string>
             n: 1
           });
           
-          const imageUrl = imageResponse.data?.[0]?.url || "";
+          const originalUrl = imageResponse.data?.[0]?.url || "";
           
-          // Return with special format that includes image display metadata
+          if (!originalUrl) {
+            throw new Error("No image URL returned from DALL-E");
+          }
+          
+          // Download and store the image in database
+          log(`Downloading image from: ${originalUrl}`);
+          const imageStorageResult = await downloadAndStoreImage(originalUrl, args.prompt);
+          
+          // Return with special format that includes stored image ID
           return JSON.stringify({
             type: "image_generation_result",
-            image_url: imageUrl,
+            image_id: imageStorageResult.id,
+            image_url: `/api/images/${imageStorageResult.id}`, // Local endpoint
+            original_url: originalUrl,
             prompt: args.prompt,
             message: `Here is the image I generated for you: "${args.prompt}"`,
             display_image: true

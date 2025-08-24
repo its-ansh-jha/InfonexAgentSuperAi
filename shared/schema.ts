@@ -103,3 +103,22 @@ export const chatCompletionResponseSchema = z.object({
 });
 
 export type ChatCompletionResponse = z.infer<typeof chatCompletionResponseSchema>;
+
+// Images table for storing generated images
+export const images = pgTable("images", {
+  id: serial("id").primaryKey(),
+  originalUrl: text("original_url").notNull(), // Original DALL-E URL
+  filename: text("filename").notNull(), // Generated filename
+  mimeType: text("mime_type").notNull().default("image/png"),
+  imageData: text("image_data").notNull(), // Base64 encoded image data
+  prompt: text("prompt"), // The prompt used to generate the image
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertImageSchema = createInsertSchema(images).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertImage = z.infer<typeof insertImageSchema>;
+export type Image = typeof images.$inferSelect;

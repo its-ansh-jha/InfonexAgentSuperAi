@@ -2,7 +2,7 @@ import { searchOpenAIEnhanced } from './services/search';
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { z } from "zod";
-import { chatCompletionRequestSchema, insertMessageSchema, insertChatSessionSchema } from "@shared/schema";
+import { chatCompletionRequestSchema, insertMessageSchema, insertChatSessionSchema, images } from "@shared/schema";
 import { generateOpenAIResponse, generateOpenAIMiniResponse } from "./services/openai";
 import { generateDeepSeekResponse } from "./services/openrouter";
 import { generateMaverickResponse, handleImageUpload } from "./services/openrouter-maverick";
@@ -43,6 +43,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       log(`Error in image upload endpoint: ${error.message}`, "error");
       return res.status(500).json({ message: error.message || "Error processing image" });
+    }
+  });
+
+  // Image serving endpoint
+  app.get("/api/images/:id", async (req, res) => {
+    try {
+      const imageId = parseInt(req.params.id);
+      
+      if (isNaN(imageId)) {
+        return res.status(400).json({ error: 'Invalid image ID' });
+      }
+      
+      // Get image from database
+      const [image] = await db.select().from(images).where(eq(images.id, imageId));
+      
+      if (!image) {
+        return res.status(404).json({ error: 'Image not found' });
+      }
+      
+      // Convert base64 back to buffer
+      const imageBuffer = Buffer.from(image.imageData, 'base64');
+      
+      // Set appropriate headers
+      res.set({
+        'Content-Type': image.mimeType,
+        'Content-Length': imageBuffer.length.toString(),
+        'Content-Disposition': `inline; filename="${image.filename}"`,
+        'Cache-Control': 'public, max-age=31536000' // Cache for 1 year since images are immutable
+      });
+      
+      res.send(imageBuffer);
+    } catch (error: any) {
+      log(`Error serving image: ${error.message}`, "error");
+      res.status(500).json({ error: 'Failed to serve image' });
     }
   });
   
