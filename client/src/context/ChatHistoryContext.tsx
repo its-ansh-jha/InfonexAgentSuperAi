@@ -103,12 +103,14 @@ export const ChatHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ c
                 // Keep structure but minimize content
                 const hasText = msg.content.some(item => item.type === 'text');
                 const hasImage = msg.content.some(item => item.type === 'image_url');
+                const hasPdf = msg.content.some(item => item.type === 'pdf_link');
                 
-                if (hasText && hasImage) {
+                if (hasText && (hasImage || hasPdf)) {
                   return {
                     ...msg,
                     content: msg.content.map(item => {
                       if (item.type === 'text') return item;
+                      if (item.type === 'pdf_link') return item; // Keep PDF links intact
                       if (item.type === 'image_url') {
                         return {
                           type: 'image_url',
@@ -121,7 +123,12 @@ export const ChatHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ c
                 } else if (hasText) {
                   return {
                     ...msg,
-                    content: msg.content.filter(item => item.type === 'text')
+                    content: msg.content.filter(item => item.type === 'text' || item.type === 'pdf_link')
+                  };
+                } else if (hasPdf) {
+                  return {
+                    ...msg,
+                    content: msg.content.filter(item => item.type === 'pdf_link')
                   };
                 } else {
                   return {

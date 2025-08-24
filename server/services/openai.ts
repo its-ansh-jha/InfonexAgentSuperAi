@@ -183,7 +183,7 @@ const availableTools = [
     type: "function" as const,
     function: {
       name: "generate_pdf",
-      description: "Generate PDF documents from text content. Use this when the user asks for documents, reports, formatted text, PDFs, or wants to download content as PDF. IMPORTANT: If you have search results or gathered information that should be formatted into a PDF document, use this tool immediately after gathering the information.",
+      description: "Generate PDF documents from text content. Use this when the user asks for documents, reports, formatted text, PDFs, or wants to download content as PDF. IMPORTANT: If you have search results or gathered information that user told to be formatted into a PDF document and then give, use this tool immediately after gathering the information.",
       parameters: {
         type: "object",
         properties: {
