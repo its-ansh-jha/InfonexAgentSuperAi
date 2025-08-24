@@ -6,7 +6,8 @@ import {
   ThumbsDown, 
   Copy, 
   RefreshCw, 
-  Check
+  Check,
+  Download
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import logoImage from '../assets/logo.webp';
@@ -222,6 +223,36 @@ export function ChatMessage({ message, useTypingAnimation = false }: ChatMessage
     });
   };
 
+  const downloadImage = async (imageUrl: string, filename: string) => {
+    try {
+      const response = await fetch(imageUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Download started",
+        description: "Image download has been initiated",
+        duration: 2000,
+      });
+    } catch (error) {
+      console.error('Download failed:', error);
+      toast({
+        title: "Download failed",
+        description: "Could not download the image. Please try right-clicking and saving.",
+        variant: "destructive",
+        duration: 3000,
+      });
+    }
+  };
+
   return (
     <div className={`flex items-start ${isUser ? 'justify-end space-x-3' : 'space-x-3'} mb-6`}>
       {!isUser && (
@@ -239,10 +270,10 @@ export function ChatMessage({ message, useTypingAnimation = false }: ChatMessage
           <div className="mb-3">
             <div className={`grid gap-2 ${images.length === 1 ? 'grid-cols-1' : images.length === 2 ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-3'}`}>
               {images.map((imageUrl, index) => (
-                <div key={index} className="relative">
+                <div key={index} className="relative group">
                   <img 
                     src={imageUrl}
-                    alt={`Uploaded image ${index + 1}`}
+                    alt={`${isUser ? 'Uploaded' : 'Generated'} image ${index + 1}`}
                     className="max-w-full h-32 sm:h-40 rounded-lg border border-neutral-600 object-cover cursor-pointer hover:opacity-90 transition-opacity"
                     data-testid={`message-image-${index}`}
                     onClick={() => window.open(imageUrl, '_blank')}
@@ -252,6 +283,29 @@ export function ChatMessage({ message, useTypingAnimation = false }: ChatMessage
                       {index + 1}/{images.length}
                     </div>
                   )}
+                  {/* Download button - only show on hover */}
+                  <div className="absolute top-1 left-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 bg-black/70 hover:bg-black/90 text-white"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              downloadImage(imageUrl, `${isUser ? 'uploaded' : 'generated'}-image-${index + 1}.png`);
+                            }}
+                          >
+                            <Download className="h-3 w-3" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom">
+                          <p>Download image</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
                 </div>
               ))}
             </div>

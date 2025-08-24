@@ -138,10 +138,15 @@ async function executeToolCall(functionName: string, args: any): Promise<string>
             n: 1
           });
           
+          const imageUrl = imageResponse.data?.[0]?.url || "";
+          
+          // Return with special format that includes image display metadata
           return JSON.stringify({
-            image_url: imageResponse.data?.[0]?.url || "",
+            type: "image_generation_result",
+            image_url: imageUrl,
             prompt: args.prompt,
-            message: "Image generated successfully!"
+            message: `Here is the image I generated for you: "${args.prompt}"`,
+            display_image: true
           });
         } catch (imageError: any) {
           log(`Image generation error: ${imageError.message}`, "error");
@@ -302,7 +307,42 @@ export async function generateOpenAIResponse(
         ...toolMessages
       ];
       
-      // Get final response after tool execution
+      // Check if any tool result contains image generation
+      const imageGenerationResult = toolMessages.find(msg => {
+        try {
+          const result = JSON.parse(msg.content);
+          return result.type === "image_generation_result" && result.display_image;
+        } catch {
+          return false;
+        }
+      });
+
+      if (imageGenerationResult) {
+        // Handle image generation specially
+        const result = JSON.parse(imageGenerationResult.content);
+        
+        // Return multimodal content with image and text
+        return {
+          message: {
+            role: "assistant",
+            content: [
+              {
+                type: "text",
+                text: result.message
+              },
+              {
+                type: "image_url",
+                image_url: {
+                  url: result.image_url
+                }
+              }
+            ] as any
+          },
+          model: MODEL,
+        };
+      }
+
+      // Get final response after tool execution for non-image cases
       const finalResponse = await openai.chat.completions.create({
         model: MODEL,
         messages: updatedMessages,
