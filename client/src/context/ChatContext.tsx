@@ -43,31 +43,12 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Store system message for API requests but don't display it
   const systemMessage = getSystemMessage();
 
-  // Function to detect if a query needs real-time data
-  const isRealTimeQuery = (query: string): boolean => {
-    const realTimeKeywords = [
-      'latest', 'recent', 'current', 'today', 'now', 'breaking', 'news',
-      'what happened', 'what\'s happening', 'update', 'this week', 'this month',
-      'this year', 'trending', 'weather', 'stock price', 'currency', 'exchange rate',
-      'covid', 'coronavirus', 'election', 'sports score', 'match result',
-      'who won', 'winner', 'score', 'live', 'real time', 'real-time'
-    ];
-
-    const lowerQuery = query.toLowerCase();
-    return realTimeKeywords.some(keyword => lowerQuery.includes(keyword));
-  };
+  // Removed preset word detection - AI now autonomously decides when to use tools
 
   const sendUserMessage = useCallback(async (content: string, imageFiles?: File[]) => {
     if (!content.trim() && (!imageFiles || imageFiles.length === 0)) return;
 
-    // Check if this is a real-time query that should be automatically searched
-    const shouldAutoSearch = (!imageFiles || imageFiles.length === 0) && isRealTimeQuery(content);
-
-    if (shouldAutoSearch) {
-      // Automatically route to search
-      await searchAndRespond(content);
-      return;
-    }
+    // AI now autonomously decides when to use search, file search, or image generation tools
 
     // Process multiple uploaded image files
     let imageDataArray: string[] = [];

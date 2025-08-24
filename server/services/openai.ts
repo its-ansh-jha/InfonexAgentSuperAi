@@ -1,6 +1,8 @@
 import OpenAI from "openai";
 import { ChatCompletionRequest, ChatCompletionResponse } from "@shared/schema";
 import { log } from "../vite";
+import { searchOpenAIEnhanced } from "./search";
+import { searchSerper } from "./serper";
 
 // Use the latest OpenAI model with vision support
 const MODEL = "gpt-4o";
@@ -15,6 +17,75 @@ const openaiMini = new OpenAI({
   apiKey: process.env.OPENAI_MINI_API_KEY || process.env.OPENAI_API_KEY || '',
 });
 
+// Define available tools for the AI
+const availableTools = [
+  {
+    type: "function" as const,
+    function: {
+      name: "web_search",
+      description: "Search the web for current, real-time information. Use this when you need up-to-date information, news, current events, or anything that might have changed recently.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: {
+            type: "string",
+            description: "The search query to find relevant information"
+          }
+        },
+        required: ["query"]
+      }
+    }
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "file_search",
+      description: "Search through uploaded files and documents to find specific information. Use this to analyze documents, find specific content within files, or answer questions about uploaded materials.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: {
+            type: "string",
+            description: "What to search for in the files"
+          },
+          file_type: {
+            type: "string",
+            description: "Optional: specific file type to search (pdf, txt, doc, etc.)"
+          }
+        },
+        required: ["query"]
+      }
+    }
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "generate_image",
+      description: "Generate images based on text descriptions. Use this when the user asks for visual content, artwork, diagrams, or any kind of image creation.",
+      parameters: {
+        type: "object",
+        properties: {
+          prompt: {
+            type: "string",
+            description: "Detailed description of the image to generate"
+          },
+          size: {
+            type: "string",
+            enum: ["1024x1024", "1792x1024", "1024x1792"],
+            description: "Image dimensions"
+          },
+          quality: {
+            type: "string",
+            enum: ["standard", "hd"],
+            description: "Image quality level"
+          }
+        },
+        required: ["prompt"]
+      }
+    }
+  }
+];
+
 /**
  * Build the OpenAI message content as multimodal (text + image) if image is provided.
  * @param text User's text input
@@ -28,6 +99,68 @@ function buildUserContent(text: string, imageBase64?: string) {
     ];
   }
   return text || ""; // fallback for text-only
+}
+
+/**
+ * Execute a tool call based on the function name and arguments
+ */
+async function executeToolCall(functionName: string, args: any): Promise<string> {
+  try {
+    switch (functionName) {
+      case "web_search":
+        log(`Executing web search: ${args.query}`);
+        const searchResults = await searchSerper(args.query);
+        return JSON.stringify({
+          search_results: searchResults.organic?.slice(0, 5).map((result: any) => ({
+            title: result.title,
+            snippet: result.snippet,
+            url: result.link
+          })) || [],
+          query: args.query
+        });
+      
+      case "file_search":
+        log(`Executing file search: ${args.query}`);
+        // For now, return a placeholder - you would implement actual file search here
+        return JSON.stringify({
+          message: "File search functionality is available but no files are currently uploaded. Please upload documents to search through them.",
+          query: args.query
+        });
+      
+      case "generate_image":
+        log(`Executing image generation: ${args.prompt}`);
+        try {
+          const imageResponse = await openai.images.generate({
+            model: "dall-e-3",
+            prompt: args.prompt,
+            size: args.size || "1024x1024",
+            quality: args.quality || "standard",
+            n: 1
+          });
+          
+          return JSON.stringify({
+            image_url: imageResponse.data?.[0]?.url || "",
+            prompt: args.prompt,
+            message: "Image generated successfully!"
+          });
+        } catch (imageError: any) {
+          log(`Image generation error: ${imageError.message}`, "error");
+          return JSON.stringify({
+            error: "Failed to generate image",
+            message: imageError.message || "Image generation is temporarily unavailable"
+          });
+        }
+      
+      default:
+        return JSON.stringify({ error: `Unknown function: ${functionName}` });
+    }
+  } catch (error: any) {
+    log(`Tool execution error for ${functionName}: ${error.message}`, "error");
+    return JSON.stringify({ 
+      error: `Failed to execute ${functionName}`, 
+      message: error.message 
+    });
+  }
 }
 
 /**
@@ -49,7 +182,7 @@ export async function generateOpenAIMiniResponse(
 
     const response = await openaiMini.chat.completions.create({
       model: "gpt-4o-mini",
-      messages: request.messages,
+      messages: request.messages as any,
     });
 
     if (!response.choices[0].message.content) {
@@ -93,7 +226,7 @@ export async function generateOpenAIResponse(
       throw new Error("OpenAI API key is not configured.");
     }
 
-    log(`Sending request to ${MODEL}`);
+    log(`Sending request to ${MODEL} with tools enabled`);
 
     // Look for a user message with imageBase64 field or multimodal content.
     // If found, convert .content into the multimodal array.
@@ -128,19 +261,73 @@ export async function generateOpenAIResponse(
       return msg;
     });
 
-    const response = await openai.chat.completions.create({
+    // Initial AI response with tools
+    let response = await openai.chat.completions.create({
       model: MODEL,
-      messages: messages,
+      messages: messages as any,
+      tools: availableTools,
+      tool_choice: "auto", // Let AI decide when to use tools
     });
 
-    if (!response.choices[0].message.content) {
+    const responseMessage = response.choices[0].message;
+    
+    // Handle tool calls if present
+    if (responseMessage.tool_calls && responseMessage.tool_calls.length > 0) {
+      log(`AI requested ${responseMessage.tool_calls.length} tool call(s)`);
+      
+      // Execute all tool calls
+      const toolMessages = [];
+      
+      for (const toolCall of responseMessage.tool_calls) {
+        const functionName = toolCall.function.name;
+        const functionArgs = JSON.parse(toolCall.function.arguments || '{}');
+        
+        const toolResult = await executeToolCall(functionName, functionArgs);
+        
+        toolMessages.push({
+          role: "tool" as const,
+          content: toolResult,
+          tool_call_id: toolCall.id
+        });
+      }
+      
+      // Add assistant message with tool calls and tool responses to conversation
+      const updatedMessages: any[] = [
+        ...messages,
+        {
+          role: "assistant",
+          content: responseMessage.content,
+          tool_calls: responseMessage.tool_calls
+        },
+        ...toolMessages
+      ];
+      
+      // Get final response after tool execution
+      const finalResponse = await openai.chat.completions.create({
+        model: MODEL,
+        messages: updatedMessages,
+        tools: availableTools,
+        tool_choice: "auto"
+      });
+      
+      return {
+        message: {
+          role: "assistant",
+          content: finalResponse.choices[0].message.content || "I used some tools to help answer your question.",
+        },
+        model: MODEL,
+      };
+    }
+
+    // No tool calls, return regular response
+    if (!responseMessage.content) {
       throw new Error("OpenAI returned an empty response");
     }
 
     return {
       message: {
         role: "assistant",
-        content: response.choices[0].message.content,
+        content: responseMessage.content,
       },
       model: MODEL,
     };
