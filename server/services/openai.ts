@@ -417,10 +417,27 @@ export async function generateOpenAIResponse(
       return msg;
     });
 
+    // Add current date context to help AI understand "today"
+    const currentDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+    const currentDateText = new Date().toLocaleDateString('en-US', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+
+    const systemMessage = {
+      role: "system" as const,
+      content: `Current date: ${currentDateText} (${currentDate}). When users ask for "today's news", "current news", or "latest news", always use this current date in your searches and responses.`
+    };
+
+    // Add system message with current date
+    const messagesWithDate = [systemMessage, ...messages as any];
+
     // Initial AI response with tools
     let response = await openai.chat.completions.create({
       model: MODEL,
-      messages: messages as any,
+      messages: messagesWithDate,
       tools: availableTools,
       tool_choice: "auto", // Let AI decide when to use tools
     });
@@ -530,7 +547,7 @@ export async function generateOpenAIResponse(
       // Get final response after tool execution - allow for additional tool calls
       const finalResponse = await openai.chat.completions.create({
         model: MODEL,
-        messages: updatedMessages,
+        messages: [systemMessage, ...updatedMessages],
         tools: availableTools,
         tool_choice: "auto"
       });
@@ -632,7 +649,7 @@ export async function generateOpenAIResponse(
 
         const secondFinalResponse = await openai.chat.completions.create({
           model: MODEL,
-          messages: secondFinalMessages,
+          messages: [systemMessage, ...secondFinalMessages],
         });
 
         return {
