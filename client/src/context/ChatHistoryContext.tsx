@@ -24,13 +24,18 @@ export const ChatHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ c
   // Load chats from localStorage on initial render
   useEffect(() => {
     const savedChats = localStorage.getItem(STORAGE_KEY);
+    const savedCurrentChatId = localStorage.getItem(`${STORAGE_KEY}-current`);
+    
     if (savedChats) {
       try {
         const parsedChats = JSON.parse(savedChats) as Chat[];
         setChats(parsedChats);
         
-        // Set the most recent chat as current
-        if (parsedChats.length > 0) {
+        // Try to restore the previously selected chat first
+        if (savedCurrentChatId && parsedChats.find(chat => chat.id === savedCurrentChatId)) {
+          setCurrentChatId(savedCurrentChatId);
+        } else if (parsedChats.length > 0) {
+          // Fallback to most recent chat if saved current chat doesn't exist
           const sortedChats = [...parsedChats].sort(
             (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
           );
@@ -166,12 +171,14 @@ export const ChatHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ c
     
     setChats(prevChats => [newChat, ...prevChats]);
     setCurrentChatId(newChat.id);
+    localStorage.setItem(`${STORAGE_KEY}-current`, newChat.id);
     
     return newChat;
   }, []);
 
   const loadChat = useCallback((chatId: string) => {
     setCurrentChatId(chatId);
+    localStorage.setItem(`${STORAGE_KEY}-current`, chatId);
   }, []);
 
   const updateCurrentChat = useCallback((messages: Message[]) => {
@@ -232,9 +239,12 @@ export const ChatHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ c
       
       // If the deleted chat was the current one, select another chat
       if (chatId === currentChatId && filteredChats.length > 0) {
-        setCurrentChatId(filteredChats[0].id);
+        const newCurrentId = filteredChats[0].id;
+        setCurrentChatId(newCurrentId);
+        localStorage.setItem(`${STORAGE_KEY}-current`, newCurrentId);
       } else if (filteredChats.length === 0) {
         // If no chats left, create a new one
+        localStorage.removeItem(`${STORAGE_KEY}-current`);
         startNewChat();
       }
       
