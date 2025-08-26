@@ -150,23 +150,36 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // Start typing animation for the AI response
       setIsTyping(true);
-    } catch (error) {
-      console.error('Failed to get AI response:', error);
+    } catch (error: any) {
+      console.error('Error sending message:', error);
+
+      // Extract meaningful error message
+      let errorMessage = 'Failed to get AI response';
+
+      if (error?.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error?.message) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
+
+      console.error('Detailed error:', errorMessage);
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to get a response from the AI',
+        description: errorMessage,
         variant: 'destructive',
       });
 
       // Add error message
-      const errorMessage: Message = {
+      const errorMessageForUI: Message = {
         role: 'assistant',
         content: 'I apologize, but I encountered an error processing your request. Please try again later.',
         model: 'gpt-4o',
         timestamp: new Date().toISOString(),
       };
 
-      const finalMessages = [...updatedMessages, errorMessage];
+      const finalMessages = [...updatedMessages, errorMessageForUI];
       setMessages(finalMessages);
       updateCurrentChat(finalMessages);
     } finally {
@@ -265,23 +278,36 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         description: 'A new AI response has been generated',
         duration: 2000,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to regenerate AI response:', error);
+
+      // Extract meaningful error message
+      let errorMessage = 'Failed to regenerate AI response';
+
+      if (error?.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error?.message) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
+
+      console.error('Detailed regeneration error:', errorMessage);
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to regenerate the AI response',
+        description: errorMessage,
         variant: 'destructive',
       });
 
       // Add error message
-      const errorMessage: Message = {
+      const errorMessageForUI: Message = {
         role: 'assistant',
         content: 'I apologize, but I encountered an error generating a new response. Please try again later.',
         model: 'gpt-4o',
         timestamp: new Date().toISOString(),
       };
 
-      const finalMessages = [...messagesUpToUserMessage, errorMessage];
+      const finalMessages = [...messagesUpToUserMessage, errorMessageForUI];
       setMessages(finalMessages);
       updateCurrentChat(finalMessages);
     } finally {
@@ -467,23 +493,36 @@ Please synthesize this information and provide a helpful response that directly 
           duration: 2000,
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to regenerate AI response:', error);
+
+      // Extract meaningful error message
+      let errorMessage = 'Failed to regenerate AI response';
+
+      if (error?.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error?.message) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
+
+      console.error('Detailed regeneration error:', errorMessage);
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to regenerate the AI response',
+        description: errorMessage,
         variant: 'destructive',
       });
 
       // Add error message
-      const errorMessage: Message = {
+      const errorMessageForUI: Message = {
         role: 'assistant',
         content: 'I apologize, but I encountered an error generating a new response. Please try again later.',
         model: 'gpt-4o',
         timestamp: new Date().toISOString(),
       };
 
-      const finalMessages = [...messagesUpToUserMessage, errorMessage];
+      const finalMessages = [...messagesUpToUserMessage, errorMessageForUI];
       setMessages(finalMessages);
       updateCurrentChat(finalMessages);
     } finally {
@@ -585,23 +624,36 @@ Please synthesize this information and provide a helpful response that directly 
         description: 'Found realtime information and generated response',
         duration: 2000,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to search and respond:', error);
+      
+      // Extract meaningful error message
+      let errorMessage = 'Failed to search for information';
+
+      if (error?.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error?.message) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
+      
+      console.error('Detailed search error:', errorMessage);
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to search for information',
+        description: errorMessage,
         variant: 'destructive',
       });
 
       // Add error message
-      const errorMessage: Message = {
+      const errorMessageForUI: Message = {
         role: 'assistant',
         content: 'I apologize, but I encountered an error while searching for information. Please try again later.',
         model: 'gpt-4o-mini',
         timestamp: new Date().toISOString(),
       };
 
-      const finalMessages = [...updatedMessages, errorMessage];
+      const finalMessages = [...updatedMessages, errorMessageForUI];
       setMessages(finalMessages);
       updateCurrentChat(finalMessages);
     } finally {
