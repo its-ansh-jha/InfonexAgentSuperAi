@@ -21,15 +21,36 @@ export const ChatHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [chats, setChats] = useState<Chat[]>([]);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
 
+  // Define startNewChat here so it's available for the initial useEffect
+  const startNewChat = useCallback(() => {
+    const systemMessage = getSystemMessage();
+    const welcomeMessage = getWelcomeMessage('gpt-4o-mini');
+
+    const newChat: Chat = {
+      id: nanoid(),
+      title: 'New Conversation',
+      messages: [welcomeMessage],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    setChats(prevChats => [newChat, ...prevChats]);
+    setCurrentChatId(newChat.id);
+    localStorage.setItem(`${STORAGE_KEY}-current`, newChat.id);
+
+    return newChat;
+  }, []);
+
+
   // Load chats from localStorage on initial render
   useEffect(() => {
     const savedChats = localStorage.getItem(STORAGE_KEY);
     const savedCurrentChatId = localStorage.getItem(`${STORAGE_KEY}-current`);
-    
+
     if (savedChats) {
       try {
         const parsedChats = JSON.parse(savedChats) as Chat[];
-        
+
         // Restore chats with proper message content preservation
         const restoredChats = parsedChats.map(chat => ({
           ...chat,
@@ -56,9 +77,9 @@ export const ChatHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ c
             return msg; // Keep string content as-is
           })
         }));
-        
+
         setChats(restoredChats);
-        
+
         // Try to restore the previously selected chat first
         if (savedCurrentChatId && restoredChats.find(chat => chat.id === savedCurrentChatId)) {
           setCurrentChatId(savedCurrentChatId);
@@ -87,7 +108,7 @@ export const ChatHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ c
         // Clean up old chats to prevent storage overflow
         const maxChats = 10; // Limit to 10 recent chats
         const recentChats = chats.slice(-maxChats);
-        
+
         // Preserve multimodal content but compress large base64 images for storage
         const cleanedChats = recentChats.map(chat => ({
           ...chat,
@@ -119,7 +140,7 @@ export const ChatHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ c
             return msg;
           })
         }));
-        
+
         localStorage.setItem(STORAGE_KEY, JSON.stringify(cleanedChats));
       } catch (error) {
         console.warn('Failed to save chat history to localStorage:', error);
@@ -137,7 +158,7 @@ export const ChatHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ c
                 const hasText = msg.content.some(item => item.type === 'text');
                 const hasImage = msg.content.some(item => item.type === 'image_url');
                 const hasPdf = msg.content.some(item => item.type === 'pdf_link');
-                
+
                 if (hasText && (hasImage || hasPdf)) {
                   return {
                     ...msg,
@@ -185,25 +206,6 @@ export const ChatHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }
   }, [chats]);
 
-  const startNewChat = useCallback(() => {
-    const systemMessage = getSystemMessage();
-    const welcomeMessage = getWelcomeMessage('gpt-4o-mini');
-    
-    const newChat: Chat = {
-      id: nanoid(),
-      title: 'New Conversation',
-      messages: [welcomeMessage],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    
-    setChats(prevChats => [newChat, ...prevChats]);
-    setCurrentChatId(newChat.id);
-    localStorage.setItem(`${STORAGE_KEY}-current`, newChat.id);
-    
-    return newChat;
-  }, []);
-
   const loadChat = useCallback((chatId: string) => {
     setCurrentChatId(chatId);
     localStorage.setItem(`${STORAGE_KEY}-current`, chatId);
@@ -211,7 +213,7 @@ export const ChatHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   const updateCurrentChat = useCallback((messages: Message[]) => {
     if (!currentChatId) return;
-    
+
     setChats(prevChats => {
       const updatedChats = prevChats.map(chat => {
         if (chat.id === currentChatId) {
@@ -222,7 +224,7 @@ export const ChatHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ c
             if (firstUserMessage) {
               // Extract text from potentially complex content
               let messageText = '';
-              
+
               if (typeof firstUserMessage.content === 'string') {
                 messageText = firstUserMessage.content;
               } else if (Array.isArray(firstUserMessage.content)) {
@@ -232,23 +234,23 @@ export const ChatHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ c
                   .map(item => item.text)
                   .join(' ');
               }
-              
+
               // Use the first few words for the title
               const words = messageText.split(' ');
               title = words.slice(0, Math.min(8, words.length)).join(' ');
-              
+
               // Add ellipsis if the content was truncated
               if (words.length > 8) {
                 title += '...';
               }
-              
+
               // If no text content was found or the title is empty, use a default
               if (!title || title.trim() === '') {
                 title = 'Image Conversation';
               }
             }
           }
-          
+
           return {
             ...chat,
             messages: [...messages], // Ensure we create a new array reference
@@ -258,13 +260,13 @@ export const ChatHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ c
         }
         return chat;
       });
-      
+
       // Force localStorage update immediately after state update
       setTimeout(() => {
         try {
           const maxChats = 10;
           const recentChats = updatedChats.slice(-maxChats);
-          
+
           // Preserve all content types for proper restoration
           const cleanedChats = recentChats.map(chat => ({
             ...chat,
@@ -291,13 +293,13 @@ export const ChatHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ c
               return msg; // Keep string content as-is
             })
           }));
-          
+
           localStorage.setItem(STORAGE_KEY, JSON.stringify(cleanedChats));
         } catch (error) {
           console.warn('Failed to save chat history immediately:', error);
         }
       }, 0);
-      
+
       return updatedChats;
     });
   }, [currentChatId]);
@@ -305,7 +307,7 @@ export const ChatHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const deleteChat = useCallback((chatId: string) => {
     setChats(prevChats => {
       const filteredChats = prevChats.filter(chat => chat.id !== chatId);
-      
+
       // If the deleted chat was the current one, select another chat
       if (chatId === currentChatId && filteredChats.length > 0) {
         const newCurrentId = filteredChats[0].id;
@@ -316,7 +318,7 @@ export const ChatHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ c
         localStorage.removeItem(`${STORAGE_KEY}-current`);
         startNewChat();
       }
-      
+
       return filteredChats;
     });
   }, [currentChatId, startNewChat]);
