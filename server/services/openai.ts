@@ -218,6 +218,13 @@ function buildUserContent(text: string, imageBase64?: string) {
 }
 
 /**
+ * Check if a URL is a local image reference (like /api/images/123)
+ */
+function isLocalImageUrl(url: string): boolean {
+  return url.startsWith('/api/images/') || url.startsWith('./api/images/') || url.startsWith('http://localhost') || url.startsWith('http://127.0.0.1');
+}
+
+/**
  * Execute a tool call based on the function name and arguments
  */
 async function executeToolCall(functionName: string, args: any): Promise<string> {
@@ -408,9 +415,16 @@ export async function generateOpenAIResponse(
               return { type: "text", text: item.text || item.content || "" };
             } else if (item.type === "image" && item.image_data) {
               return { type: "image_url", image_url: { url: item.image_data } };
+            } else if (item.type === "image_url" && item.image_url?.url) {
+              // Check if it's a local image URL - if so, skip it for OpenAI processing
+              // OpenAI can't access our local URLs, so we'll just include the text content
+              if (isLocalImageUrl(item.image_url.url)) {
+                return { type: "text", text: "[Previously generated image reference]" };
+              }
+              return item;
             }
             return item;
-          });
+          }).filter(item => item !== null); // Remove any null items
           return { ...msg, content: contentArray };
         }
       }
