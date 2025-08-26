@@ -221,7 +221,14 @@ function buildUserContent(text: string, imageBase64?: string) {
  * Check if a URL is a local image reference (like /api/images/123)
  */
 function isLocalImageUrl(url: string): boolean {
-  return url.startsWith('/api/images/') || url.startsWith('./api/images/') || url.startsWith('http://localhost') || url.startsWith('http://127.0.0.1');
+  return url.startsWith('/api/images/') || 
+         url.startsWith('./api/images/') || 
+         url.startsWith('http://localhost') || 
+         url.startsWith('http://127.0.0.1') ||
+         url.startsWith('https://localhost') ||
+         url.includes('localhost') ||
+         url.includes('127.0.0.1') ||
+         url.match(/^\/api\/images\/\d+$/);
 }
 
 /**
@@ -414,17 +421,29 @@ export async function generateOpenAIResponse(
             if (item.type === "text") {
               return { type: "text", text: item.text || item.content || "" };
             } else if (item.type === "image" && item.image_data) {
+              // Check if image_data is a local URL
+              if (isLocalImageUrl(item.image_data)) {
+                return { type: "text", text: "[Previously generated image - not accessible to AI]" };
+              }
               return { type: "image_url", image_url: { url: item.image_data } };
             } else if (item.type === "image_url" && item.image_url?.url) {
-              // Check if it's a local image URL - if so, skip it for OpenAI processing
-              // OpenAI can't access our local URLs, so we'll just include the text content
+              // Check if it's a local image URL - if so, replace with text
               if (isLocalImageUrl(item.image_url.url)) {
-                return { type: "text", text: "[Previously generated image reference]" };
+                return { type: "text", text: "[Previously generated image - not accessible to AI]" };
               }
               return item;
+            } else if (item.type === "pdf_link") {
+              // Handle PDF links - convert to text description
+              return { type: "text", text: `[PDF document: ${item.title || 'Generated PDF'}]` };
             }
             return item;
           }).filter(item => item !== null); // Remove any null items
+          
+          // If all content was filtered out (only local images), add a text message
+          if (contentArray.length === 0) {
+            contentArray.push({ type: "text", text: "[Message contained local resources not accessible to AI]" });
+          }
+          
           return { ...msg, content: contentArray };
         }
       }
