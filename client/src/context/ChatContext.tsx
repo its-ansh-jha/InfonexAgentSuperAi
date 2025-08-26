@@ -28,7 +28,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { toast } = useToast();
 
   // Get current chat from ChatHistoryContext
-  const { currentChat, currentChatId, updateCurrentChat, startNewChat } = useChatHistory();
+  const { currentChat, updateCurrentChat, startNewChat } = useChatHistory();
 
   // Update local messages when currentChat changes
   useEffect(() => {
