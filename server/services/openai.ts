@@ -434,9 +434,10 @@ export async function generateOpenAIResponse(
               return item;
             } else if (item.type === "pdf_link") {
               // Handle PDF links - convert to text description
-              return { type: "text", text: `[PDF document: ${item.title || 'Generated PDF'}]` };
+              return { type: "text", text: `[PDF document: ${item.title || 'Generated PDF'} - not accessible to AI]` };
             }
-            return item;
+            // Filter out any unknown or invalid content types
+            return null;
           }).filter(item => item !== null); // Remove any null items
           
           // If all content was filtered out (only local images), add a text message
@@ -448,13 +449,21 @@ export async function generateOpenAIResponse(
         }
       }
       
-      // Also filter assistant messages that might contain local image references
+      // Also filter assistant messages that might contain local image references or PDF links
       if (msg.role === "assistant" && Array.isArray(msg.content)) {
         const contentArray = msg.content.map((item: any) => {
-          if (item.type === "image_url" && item.image_url?.url && isLocalImageUrl(item.image_url.url)) {
-            return { type: "text", text: "[Previously generated image - not accessible to AI]" };
+          if (item.type === "text") {
+            return { type: "text", text: item.text || item.content || "" };
+          } else if (item.type === "image_url" && item.image_url?.url) {
+            if (isLocalImageUrl(item.image_url.url)) {
+              return { type: "text", text: "[Previously generated image - not accessible to AI]" };
+            }
+            return item;
+          } else if (item.type === "pdf_link") {
+            return { type: "text", text: `[PDF document: ${item.title || 'Generated PDF'} - not accessible to AI]` };
           }
-          return item;
+          // Filter out any unknown content types
+          return null;
         }).filter(item => item !== null);
         
         if (contentArray.length === 0) {
