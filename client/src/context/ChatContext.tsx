@@ -28,7 +28,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { toast } = useToast();
 
   // Get current chat from ChatHistoryContext
-  const { currentChat, updateCurrentChat, startNewChat } = useChatHistory();
+  const { currentChat, updateCurrentChat, startNewChat, deleteChat } = useChatHistory();
 
   // Update local messages when currentChat changes
   useEffect(() => {
@@ -317,11 +317,16 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [messages, toast, updateCurrentChat, systemMessage]);
 
   const clearMessages = useCallback(() => {
-    // Reset messages but keep chat history in the background
+    // Delete the current chat if it exists, then start a new one
+    if (currentChat && currentChat.id) {
+      deleteChat(currentChat.id);
+    } else {
+      // If no current chat, just start a new one
+      startNewChat();
+    }
+    // Reset local messages
     setMessages([]);
-    // The new chat gets created in the ChatHistoryContext
-    startNewChat();
-  }, [startNewChat]);
+  }, [currentChat, deleteChat, startNewChat]);
 
   // Function to regenerate a response for a specific user message by index
   const regenerateResponseAtIndex = useCallback(async (userMessageIndex: number) => {
