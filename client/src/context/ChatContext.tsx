@@ -316,6 +316,18 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [messages, toast, updateCurrentChat, systemMessage]);
 
+  const clearMessages = useCallback(() => {
+    // Delete the current chat if it exists, then start a new one
+    if (currentChat && currentChat.id) {
+      deleteChat(currentChat.id);
+    } else {
+      // If no current chat, just start a new one
+      startNewChat();
+    }
+    // Reset local messages
+    setMessages([]);
+  }, [currentChat, deleteChat, startNewChat]);
+
   // Function to regenerate a response for a specific user message by index
   const regenerateResponseAtIndex = useCallback(async (userMessageIndex: number) => {
     // Validate the index
@@ -340,66 +352,152 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
 
     try {
-      // Extract content from user message and handle multimodal content
-      let textContent = '';
-      let hasImages = false;
+      // Extract content from user message
+      const content = typeof userMessage.content === 'string' 
+        ? userMessage.content 
+        : 'Could not retrieve message content';
 
-      if (typeof userMessage.content === 'string') {
-        textContent = userMessage.content;
-      } else if (Array.isArray(userMessage.content)) {
-        // Handle multimodal content 
-        const textPart = userMessage.content.find(item => item.type === 'text');
-        const hasImageContent = userMessage.content.some(item => 
-          item.type === 'image_url' || item.type === 'image'
-        );
+      // Check if this is a search message
+      const isSearchMessage = content.startsWith('🔍');
 
-        textContent = textPart?.text || '';
-        hasImages = hasImageContent;
-      } else {
-        textContent = 'Could not retrieve message content';
-      }
+      if (isSearchMessage) {
+        // Extract the actual search query (remove 🔍 if present)
+        const searchQuery = content.startsWith('🔍') ? content.replace('🔍 ', '').trim() : content;
 
-      // Get all messages up to the user message, including system message for context
-      const currentMessages = [systemMessage, ...messagesUpToUserMessage];
-
-      let aiResponse;
-
-      // Use the same API approach as sendUserMessage for consistency
-      if (hasImages) {
-        // Convert messages to proper format for API
-        const messagesForAPI = currentMessages.map(msg => {
-          if (msg.role === 'user' && Array.isArray(msg.content)) {
-            return { ...msg, content: msg.content };
-          }
-          return { ...msg, content: String(msg.content) };
+        // Perform search using Serper API
+        const searchResponse = await fetch('/api/search', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ query: searchQuery }),
         });
 
-        aiResponse = await sendMessage(textContent, 'gpt-4o', messagesForAPI);
+        if (!searchResponse.ok) {
+          throw new Error('Search failed');
+        }
+
+        const searchData = await searchResponse.json();
+
+        // Create a refined prompt with search results for GPT-4o-mini
+        const searchResults = searchData.organic?.slice(0, 5).map((result: any) => 
+          `Title: ${result.title}\nSnippet: ${result.snippet}\nURL: ${result.link}`
+        ).join('\n\n') || 'No search results found.';
+
+        // Check if this is a question about who developed/created the AI
+        const isDeveloperQuery = searchQuery.toLowerCase().includes('who developed') || 
+                                searchQuery.toLowerCase().includes('who created') ||
+                                searchQuery.toLowerCase().includes('who made') ||
+                                searchQuery.toLowerCase().includes('developer') ||
+                                searchQuery.toLowerCase().includes('creator');
+
+        let refinedPrompt;
+
+        if (isDeveloperQuery && searchQuery.toLowerCase().includes('you')) {
+          refinedPrompt = `I was developed by Infonex and I am running as a search question refiner using the GPT-4o-mini AI model engine. I help provide real-time information by searching the web and refining the results to give you accurate and up-to-date answers.
+
+Based on the following search results for "${searchQuery}":
+
+${searchResults}
+
+Please provide a comprehensive response that includes the above information about my development by Infonex and my role as a search refiner, while also incorporating any relevant information from the search results.`;
+        } else {
+          refinedPrompt = `Based on the following search results for "${searchQuery}", provide a comprehensive and accurate answer:
+
+${searchResults}
+
+Please synthesize this information and provide a helpful response that directly answers the user's query. Include relevant details and cite sources when appropriate.`;
+        }
+
+        // Send to GPT-4o-mini for refinement
+        const currentMessages = [
+          systemMessage,
+          ...messagesUpToUserMessage,
+          { role: 'user', content: refinedPrompt }
+        ];
+
+        const aiResponse = await sendMessage(
+          refinedPrompt,
+          'gpt-4o-mini',
+          currentMessages.filter((msg): msg is Message => 
+            'model' in msg && 'timestamp' in msg
+          )
+        );
+
+        // Add the refined AI response to the chat
+        const newMessage: Message = {
+          ...aiResponse,
+          timestamp: new Date().toISOString(),
+        };
+
+        const finalMessages = [...messagesUpToUserMessage, newMessage];
+        setMessages(finalMessages);
+        updateCurrentChat(finalMessages);
+
+        toast({
+          title: 'Search response regenerated',
+          description: 'A new search response has been generated',
+          duration: 2000,
+        });
       } else {
-        // Regular text message
-        aiResponse = await sendMessage(textContent, 'gpt-4o', currentMessages);
+        // Handle regular (non-search) messages
+        // Get all messages up to the user message, including system message for context
+        const currentMessages = [systemMessage, ...messagesUpToUserMessage];
+
+        // Check if the message contains image data
+        const hasImage = Array.isArray(userMessage.content) && 
+           userMessage.content.some((item: any) => item.type === 'image_url' || item.type === 'image');
+
+        let aiResponse;
+        if (hasImage) {
+          // Handle image messages with GPT-4o
+          let imageData = null;
+          if (Array.isArray(userMessage.content)) {
+            const imageItem = userMessage.content.find((item: any) => 
+              item.type === 'image_url' || item.type === 'image'
+            );
+            if (imageItem && 'image_url' in imageItem && (imageItem as any).image_url?.url) {
+              const imageUrl = (imageItem as any).image_url.url;
+              if (imageUrl.startsWith('data:image/jpeg;base64,')) {
+                imageData = imageUrl.replace('data:image/jpeg;base64,', '');
+              } else if (imageUrl.startsWith('data:image/png;base64,')) {
+                imageData = imageUrl.replace('data:image/png;base64,', '');
+              }
+            } else if (imageItem && 'image_data' in imageItem && (imageItem as any).image_data) {
+              imageData = (imageItem as any).image_data;
+            }
+          }
+          aiResponse = await sendMessageWithImage(
+            typeof userMessage.content === 'string' ? userMessage.content : '',
+            imageData,
+            'gpt-4o',
+            currentMessages
+          );
+        } else {
+          // Handle text-only messages with GPT-4o
+          aiResponse = await sendMessage(
+            content,
+            'gpt-4o',
+            currentMessages
+          );
+        }
+
+        // Add the new AI response to the chat
+        const newMessage: Message = {
+          ...aiResponse,
+          timestamp: new Date().toISOString()
+        };
+
+        const finalMessages = [...messagesUpToUserMessage, newMessage];
+        setMessages(finalMessages);
+        updateCurrentChat(finalMessages);
+
+        toast({
+          title: 'Response regenerated',
+          description: 'A new AI response has been generated',
+          duration: 2000,
+        });
       }
-
-      // Ensure we have a valid response
-      if (!aiResponse || !aiResponse.content) {
-        throw new Error('Invalid response from API');
-      }
-
-      // Add the new AI response to the chat
-      const newMessage: Message = {
-        ...aiResponse,
-        timestamp: new Date().toISOString()
-      };
-
-      const finalMessages = [...messagesUpToUserMessage, newMessage];
-      setMessages(finalMessages);
-      updateCurrentChat(finalMessages);
-
-      toast({
-        title: 'Response regenerated',
-        description: 'A new AI response has been generated',
-        duration: 2000,
-      });
     } catch (error: any) {
       console.error('Failed to regenerate AI response:', error);
 
@@ -421,7 +519,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         variant: 'destructive',
       });
 
-      // Add error message instead of leaving blank
+      // Add error message
       const errorMessageForUI: Message = {
         role: 'assistant',
         content: 'I apologize, but I encountered an error generating a new response. Please try again later.',
@@ -436,7 +534,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(false);
       setAbortController(null);
     }
-  }, [messages, toast, updateCurrentChat, systemMessage]);
+  }, [messages, toast, updateCurrentChat, systemMessage, sendMessage, sendMessageWithImage]);
 
   // Function to search and get AI refined response
   const searchAndRespond = useCallback(async (query: string) => {
@@ -533,7 +631,7 @@ Please synthesize this information and provide a helpful response that directly 
       });
     } catch (error: any) {
       console.error('Failed to search and respond:', error);
-
+      
       // Extract meaningful error message
       let errorMessage = 'Failed to search for information';
 
@@ -544,7 +642,7 @@ Please synthesize this information and provide a helpful response that directly 
       } else if (typeof error === 'string') {
         errorMessage = error;
       }
-
+      
       console.error('Detailed search error:', errorMessage);
       toast({
         title: 'Error',
