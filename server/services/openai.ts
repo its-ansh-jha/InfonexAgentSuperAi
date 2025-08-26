@@ -447,6 +447,23 @@ export async function generateOpenAIResponse(
           return { ...msg, content: contentArray };
         }
       }
+      
+      // Also filter assistant messages that might contain local image references
+      if (msg.role === "assistant" && Array.isArray(msg.content)) {
+        const contentArray = msg.content.map((item: any) => {
+          if (item.type === "image_url" && item.image_url?.url && isLocalImageUrl(item.image_url.url)) {
+            return { type: "text", text: "[Previously generated image - not accessible to AI]" };
+          }
+          return item;
+        }).filter(item => item !== null);
+        
+        if (contentArray.length === 0) {
+          contentArray.push({ type: "text", text: "[Message contained local resources not accessible to AI]" });
+        }
+        
+        return { ...msg, content: contentArray };
+      }
+      
       return msg;
     });
 
