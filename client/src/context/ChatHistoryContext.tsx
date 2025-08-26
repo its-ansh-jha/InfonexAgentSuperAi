@@ -21,71 +21,22 @@ export const ChatHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [chats, setChats] = useState<Chat[]>([]);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
 
-  // Define startNewChat here so it's available for the initial useEffect
-  const startNewChat = useCallback(() => {
-    const systemMessage = getSystemMessage();
-    const welcomeMessage = getWelcomeMessage('gpt-4o-mini');
-
-    const newChat: Chat = {
-      id: nanoid(),
-      title: 'New Conversation',
-      messages: [welcomeMessage],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    setChats(prevChats => [newChat, ...prevChats]);
-    setCurrentChatId(newChat.id);
-    localStorage.setItem(`${STORAGE_KEY}-current`, newChat.id);
-
-    return newChat;
-  }, []);
-
-
   // Load chats from localStorage on initial render
   useEffect(() => {
     const savedChats = localStorage.getItem(STORAGE_KEY);
     const savedCurrentChatId = localStorage.getItem(`${STORAGE_KEY}-current`);
-
+    
     if (savedChats) {
       try {
         const parsedChats = JSON.parse(savedChats) as Chat[];
-
-        // Restore chats with proper message content preservation
-        const restoredChats = parsedChats.map(chat => ({
-          ...chat,
-          messages: chat.messages.map(msg => {
-            // Ensure all message properties are preserved
-            if (Array.isArray(msg.content)) {
-              return {
-                ...msg,
-                content: msg.content.map(item => {
-                  // Restore all content types properly
-                  if (item.type === 'image_url' && (item as any).image_url?.url) {
-                    return item; // Keep image URLs intact
-                  }
-                  if (item.type === 'pdf_link') {
-                    return item; // Keep PDF links intact
-                  }
-                  if (item.type === 'text') {
-                    return item; // Keep text content intact
-                  }
-                  return item; // Keep any other content types
-                })
-              };
-            }
-            return msg; // Keep string content as-is
-          })
-        }));
-
-        setChats(restoredChats);
-
+        setChats(parsedChats);
+        
         // Try to restore the previously selected chat first
-        if (savedCurrentChatId && restoredChats.find(chat => chat.id === savedCurrentChatId)) {
+        if (savedCurrentChatId && parsedChats.find(chat => chat.id === savedCurrentChatId)) {
           setCurrentChatId(savedCurrentChatId);
-        } else if (restoredChats.length > 0) {
+        } else if (parsedChats.length > 0) {
           // Fallback to most recent chat if saved current chat doesn't exist
-          const sortedChats = [...restoredChats].sort(
+          const sortedChats = [...parsedChats].sort(
             (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
           );
           setCurrentChatId(sortedChats[0].id);
@@ -99,7 +50,7 @@ export const ChatHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ c
       // If no saved chats, start a new chat
       startNewChat();
     }
-  }, [startNewChat]);
+  }, []);
 
   // Save chats to localStorage whenever chats change
   useEffect(() => {
@@ -108,7 +59,7 @@ export const ChatHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ c
         // Clean up old chats to prevent storage overflow
         const maxChats = 10; // Limit to 10 recent chats
         const recentChats = chats.slice(-maxChats);
-
+        
         // Preserve multimodal content but compress large base64 images for storage
         const cleanedChats = recentChats.map(chat => ({
           ...chat,
@@ -140,7 +91,7 @@ export const ChatHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ c
             return msg;
           })
         }));
-
+        
         localStorage.setItem(STORAGE_KEY, JSON.stringify(cleanedChats));
       } catch (error) {
         console.warn('Failed to save chat history to localStorage:', error);
@@ -158,7 +109,7 @@ export const ChatHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ c
                 const hasText = msg.content.some(item => item.type === 'text');
                 const hasImage = msg.content.some(item => item.type === 'image_url');
                 const hasPdf = msg.content.some(item => item.type === 'pdf_link');
-
+                
                 if (hasText && (hasImage || hasPdf)) {
                   return {
                     ...msg,
@@ -206,6 +157,25 @@ export const ChatHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }
   }, [chats]);
 
+  const startNewChat = useCallback(() => {
+    const systemMessage = getSystemMessage();
+    const welcomeMessage = getWelcomeMessage('gpt-4o-mini');
+    
+    const newChat: Chat = {
+      id: nanoid(),
+      title: 'New Conversation',
+      messages: [welcomeMessage],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    
+    setChats(prevChats => [newChat, ...prevChats]);
+    setCurrentChatId(newChat.id);
+    localStorage.setItem(`${STORAGE_KEY}-current`, newChat.id);
+    
+    return newChat;
+  }, []);
+
   const loadChat = useCallback((chatId: string) => {
     setCurrentChatId(chatId);
     localStorage.setItem(`${STORAGE_KEY}-current`, chatId);
@@ -213,9 +183,9 @@ export const ChatHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   const updateCurrentChat = useCallback((messages: Message[]) => {
     if (!currentChatId) return;
-
+    
     setChats(prevChats => {
-      const updatedChats = prevChats.map(chat => {
+      return prevChats.map(chat => {
         if (chat.id === currentChatId) {
           // Generate a title from the first user message if it's a new chat with default title
           let title = chat.title;
@@ -224,7 +194,7 @@ export const ChatHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ c
             if (firstUserMessage) {
               // Extract text from potentially complex content
               let messageText = '';
-
+              
               if (typeof firstUserMessage.content === 'string') {
                 messageText = firstUserMessage.content;
               } else if (Array.isArray(firstUserMessage.content)) {
@@ -234,80 +204,39 @@ export const ChatHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ c
                   .map(item => item.text)
                   .join(' ');
               }
-
+              
               // Use the first few words for the title
               const words = messageText.split(' ');
               title = words.slice(0, Math.min(8, words.length)).join(' ');
-
+              
               // Add ellipsis if the content was truncated
               if (words.length > 8) {
                 title += '...';
               }
-
+              
               // If no text content was found or the title is empty, use a default
               if (!title || title.trim() === '') {
                 title = 'Image Conversation';
               }
             }
           }
-
+          
           return {
             ...chat,
-            messages: [...messages], // Ensure we create a new array reference
+            messages,
             title,
             updatedAt: new Date().toISOString()
           };
         }
         return chat;
       });
-
-      // Force localStorage update immediately after state update
-      setTimeout(() => {
-        try {
-          const maxChats = 10;
-          const recentChats = updatedChats.slice(-maxChats);
-
-          // Preserve all content types for proper restoration
-          const cleanedChats = recentChats.map(chat => ({
-            ...chat,
-            messages: chat.messages.map(msg => {
-              // Preserve the complete message structure
-              if (Array.isArray(msg.content)) {
-                return {
-                  ...msg,
-                  content: msg.content.map(item => {
-                    // Keep all content types intact for proper display
-                    if (item.type === 'image_url' && (item as any).image_url?.url) {
-                      const url = (item as any).image_url.url;
-                      // Keep all URLs, including local ones
-                      return item;
-                    }
-                    if (item.type === 'pdf_link') {
-                      // Keep PDF links intact
-                      return item;
-                    }
-                    return item; // Keep all other content types
-                  })
-                };
-              }
-              return msg; // Keep string content as-is
-            })
-          }));
-
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(cleanedChats));
-        } catch (error) {
-          console.warn('Failed to save chat history immediately:', error);
-        }
-      }, 0);
-
-      return updatedChats;
     });
   }, [currentChatId]);
 
   const deleteChat = useCallback((chatId: string) => {
     setChats(prevChats => {
       const filteredChats = prevChats.filter(chat => chat.id !== chatId);
-
+      
       // If the deleted chat was the current one, select another chat
       if (chatId === currentChatId && filteredChats.length > 0) {
         const newCurrentId = filteredChats[0].id;
@@ -318,7 +247,7 @@ export const ChatHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ c
         localStorage.removeItem(`${STORAGE_KEY}-current`);
         startNewChat();
       }
-
+      
       return filteredChats;
     });
   }, [currentChatId, startNewChat]);

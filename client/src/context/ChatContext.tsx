@@ -32,17 +32,13 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Update local messages when currentChat changes
   useEffect(() => {
-    if (currentChat && currentChat.messages) {
-      // Ensure we have a complete messages array
-      const validMessages = currentChat.messages.filter(msg => 
-        msg && msg.role && (msg.content || msg.content === '')
-      );
-      setMessages(validMessages);
-    } else if (currentChat === null) {
-      // Only start new chat if currentChat is explicitly null (not undefined/loading)
-      setMessages([]);
+    if (currentChat) {
+      setMessages(currentChat.messages);
+    } else {
+      // If no current chat, create a new one
+      startNewChat();
     }
-  }, [currentChat]);
+  }, [currentChat, startNewChat]);
 
   // Store system message for API requests but don't display it
   const systemMessage = getSystemMessage();
