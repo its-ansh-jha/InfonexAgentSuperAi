@@ -29,14 +29,42 @@ export const ChatHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ c
     if (savedChats) {
       try {
         const parsedChats = JSON.parse(savedChats) as Chat[];
-        setChats(parsedChats);
+        
+        // Restore chats with proper message content preservation
+        const restoredChats = parsedChats.map(chat => ({
+          ...chat,
+          messages: chat.messages.map(msg => {
+            // Ensure all message properties are preserved
+            if (Array.isArray(msg.content)) {
+              return {
+                ...msg,
+                content: msg.content.map(item => {
+                  // Restore all content types properly
+                  if (item.type === 'image_url' && (item as any).image_url?.url) {
+                    return item; // Keep image URLs intact
+                  }
+                  if (item.type === 'pdf_link') {
+                    return item; // Keep PDF links intact
+                  }
+                  if (item.type === 'text') {
+                    return item; // Keep text content intact
+                  }
+                  return item; // Keep any other content types
+                })
+              };
+            }
+            return msg; // Keep string content as-is
+          })
+        }));
+        
+        setChats(restoredChats);
         
         // Try to restore the previously selected chat first
-        if (savedCurrentChatId && parsedChats.find(chat => chat.id === savedCurrentChatId)) {
+        if (savedCurrentChatId && restoredChats.find(chat => chat.id === savedCurrentChatId)) {
           setCurrentChatId(savedCurrentChatId);
-        } else if (parsedChats.length > 0) {
+        } else if (restoredChats.length > 0) {
           // Fallback to most recent chat if saved current chat doesn't exist
-          const sortedChats = [...parsedChats].sort(
+          const sortedChats = [...restoredChats].sort(
             (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
           );
           setCurrentChatId(sortedChats[0].id);
@@ -50,7 +78,7 @@ export const ChatHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ c
       // If no saved chats, start a new chat
       startNewChat();
     }
-  }, []);
+  }, [startNewChat]);
 
   // Save chats to localStorage whenever chats change
   useEffect(() => {
@@ -185,7 +213,7 @@ export const ChatHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ c
     if (!currentChatId) return;
     
     setChats(prevChats => {
-      return prevChats.map(chat => {
+      const updatedChats = prevChats.map(chat => {
         if (chat.id === currentChatId) {
           // Generate a title from the first user message if it's a new chat with default title
           let title = chat.title;
@@ -223,13 +251,54 @@ export const ChatHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ c
           
           return {
             ...chat,
-            messages,
+            messages: [...messages], // Ensure we create a new array reference
             title,
             updatedAt: new Date().toISOString()
           };
         }
         return chat;
       });
+      
+      // Force localStorage update immediately after state update
+      setTimeout(() => {
+        try {
+          const maxChats = 10;
+          const recentChats = updatedChats.slice(-maxChats);
+          
+          // Preserve all content types for proper restoration
+          const cleanedChats = recentChats.map(chat => ({
+            ...chat,
+            messages: chat.messages.map(msg => {
+              // Preserve the complete message structure
+              if (Array.isArray(msg.content)) {
+                return {
+                  ...msg,
+                  content: msg.content.map(item => {
+                    // Keep all content types intact for proper display
+                    if (item.type === 'image_url' && (item as any).image_url?.url) {
+                      const url = (item as any).image_url.url;
+                      // Keep all URLs, including local ones
+                      return item;
+                    }
+                    if (item.type === 'pdf_link') {
+                      // Keep PDF links intact
+                      return item;
+                    }
+                    return item; // Keep all other content types
+                  })
+                };
+              }
+              return msg; // Keep string content as-is
+            })
+          }));
+          
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(cleanedChats));
+        } catch (error) {
+          console.warn('Failed to save chat history immediately:', error);
+        }
+      }, 0);
+      
+      return updatedChats;
     });
   }, [currentChatId]);
 
