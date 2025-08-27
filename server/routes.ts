@@ -1,4 +1,5 @@
 import { searchOpenAIEnhanced } from './services/search';
+import { searchSerper } from './services/serper';
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { z } from "zod";
@@ -21,7 +22,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       fileSize: 8 * 1024 * 1024, // 8MB max file size
     }
   });
-  // Search endpoint for realtime data using OpenAI
+  // Search endpoint for realtime data using Serper API
   app.post('/api/search', async (req, res) => {
     try {
       const { query } = req.body;
@@ -30,11 +31,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Query is required and must be a string' });
       }
       
-      const data = await searchOpenAIEnhanced(query);
+      // Use Serper API for real web search results
+      const data = await searchSerper(query);
       res.json(data);
     } catch (error: any) {
-      log(`Error in OpenAI search endpoint: ${error.message}`, "error");
-      res.status(500).json({ error: error.message || 'OpenAI search failed' });
+      log(`Error in Serper search endpoint: ${error.message}`, "error");
+      res.status(500).json({ error: error.message || 'Web search failed' });
     }
   });
   app.post("/api/upload-image", upload.single('image'), async (req, res) => {
