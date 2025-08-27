@@ -515,7 +515,7 @@ export function ChatInput() {
             ) : isSearchMode ? (
               <span className="text-blue-400">Search mode: Get realtime data refined by GPT-4o-mini</span>
             ) : (
-              <span>Infonex is using GPT-4o to generate human-like text and analyze images</span>
+              <span>Infonex is using GPT-5 to generate human-like text and analyze images</span>
             )}
           </div>
         </form>
