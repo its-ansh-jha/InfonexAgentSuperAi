@@ -20,7 +20,6 @@ import {
   DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
 import { Switch } from '@/components/ui/switch';
-import { useWebSearch } from '@/context/WebSearchContext';
 
 export function ChatInput() {
   const [input, setInput] = useState('');
@@ -34,7 +33,6 @@ export function ChatInput() {
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const { sendUserMessage, searchAndRespond, isLoading, isTyping, stopGeneration, stopTyping } = useChat();
   const { toast } = useToast();
-  const { isWebSearchEnabled, toggleWebSearch } = useWebSearch();
 
   // Auto-resize textarea on input
   useEffect(() => {
@@ -370,53 +368,31 @@ export function ChatInput() {
 
           <div className="relative flex items-center bg-neutral-800 rounded-full border border-neutral-700 overflow-hidden">
             <div className="flex items-center pl-3 space-x-1">
-              <DropdownMenu>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className={`h-9 w-9 rounded-full hover:bg-neutral-700 ${
-                            isWebSearchEnabled ? 'text-primary hover:text-primary bg-primary/20' : 'text-neutral-400 hover:text-white'
-                          }`}
-                          data-testid="button-web-search-menu"
-                        >
-                          <Globe className="h-5 w-5" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                    </TooltipTrigger>
-                    <TooltipContent side="top">
-                      <p>Web Search Settings</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-                <DropdownMenuContent align="start" className="w-56">
-                  <DropdownMenuLabel>Web Search Tool</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <div className="flex items-center justify-between p-2">
-                    <div className="flex items-center space-x-2">
-                      <Search className="h-4 w-4" />
-                      <span className="text-sm">Web Search</span>
-                    </div>
-                    <Switch
-                      checked={isWebSearchEnabled}
-                      onCheckedChange={toggleWebSearch}
-                      data-testid="switch-web-search"
-                    />
-                  </div>
-                  <div className="px-2 pb-1">
-                    <p className="text-xs text-muted-foreground">
-                      {isWebSearchEnabled 
-                        ? 'GPT-5 can access live web data for current information' 
-                        : 'GPT-5 will only use its training data'
-                      }
-                    </p>
-                  </div>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9 rounded-full hover:bg-neutral-700 text-blue-500 hover:text-blue-400"
+                      data-testid="button-search-info"
+                      onClick={() => {
+                        toast({
+                          title: "🔍 AI Search Already Built-in",
+                          description: "GPT-5 has automatic web search capabilities. Just ask any question that requires current information and the AI will search for you!",
+                          duration: 4000,
+                        });
+                      }}
+                    >
+                      <Globe className="h-5 w-5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">
+                    <p>AI Search Info</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
 
               <DropdownMenu>
                   <TooltipProvider>
@@ -528,7 +504,6 @@ export function ChatInput() {
             ) : (
               <span>
                 Infonex is using GPT-5 to generate human-like text and analyze images
-                {isWebSearchEnabled && <span className="text-blue-400"> • Web search enabled</span>}
               </span>
             )}
           </div>
