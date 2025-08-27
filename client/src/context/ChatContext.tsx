@@ -32,12 +32,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Update local messages when currentChat changes
   useEffect(() => {
-    console.log('ChatContext: currentChat changed:', currentChat ? `${currentChat.messages.length} messages` : 'no chat');
     if (currentChat) {
-      console.log('ChatContext: Setting messages from currentChat:', currentChat.messages);
       setMessages(currentChat.messages);
     } else {
-      console.log('ChatContext: No current chat, creating new one');
       // If no current chat, create a new one
       startNewChat();
     }
@@ -355,10 +352,34 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
 
     try {
-      // Extract content from user message
-      const content = typeof userMessage.content === 'string' 
-        ? userMessage.content 
-        : 'Could not retrieve message content';
+      // Extract content from user message and handle multimodal content properly
+      let content = '';
+      let imageData = null;
+
+      if (typeof userMessage.content === 'string') {
+        content = userMessage.content;
+      } else if (Array.isArray(userMessage.content)) {
+        // Handle multimodal content with proper image_url format
+        const textPart = userMessage.content.find(item => item.type === 'text');
+        const imageUrlPart = userMessage.content.find(item => item.type === 'image_url');
+        const imagePart = userMessage.content.find(item => item.type === 'image');
+
+        content = textPart?.text || '';
+
+        // Handle different image formats - extract base64 from data URL
+        if (imageUrlPart && (imageUrlPart as any).image_url?.url) {
+          const imageUrl = (imageUrlPart as any).image_url.url;
+          if (imageUrl.startsWith('data:image/jpeg;base64,')) {
+            imageData = imageUrl.replace('data:image/jpeg;base64,', '');
+          } else if (imageUrl.startsWith('data:image/png;base64,')) {
+            imageData = imageUrl.replace('data:image/png;base64,', '');
+          }
+        } else if (imagePart && imagePart.image_data) {
+          imageData = imagePart.image_data;
+        }
+      } else {
+        content = 'Could not retrieve message content';
+      }
 
       // Check if this is a search message
       const isSearchMessage = content.startsWith('🔍');
@@ -447,37 +468,17 @@ Please synthesize this information and provide a helpful response that directly 
         // Get all messages up to the user message, including system message for context
         const currentMessages = [systemMessage, ...messagesUpToUserMessage];
 
-        // Check if the message contains image data
-        const hasImage = Array.isArray(userMessage.content) && 
-           userMessage.content.some((item: any) => item.type === 'image_url' || item.type === 'image');
-
         let aiResponse;
-        if (hasImage) {
-          // Handle image messages with GPT-4o
-          let imageData = null;
-          if (Array.isArray(userMessage.content)) {
-            const imageItem = userMessage.content.find((item: any) => 
-              item.type === 'image_url' || item.type === 'image'
-            );
-            if (imageItem && 'image_url' in imageItem && (imageItem as any).image_url?.url) {
-              const imageUrl = (imageItem as any).image_url.url;
-              if (imageUrl.startsWith('data:image/jpeg;base64,')) {
-                imageData = imageUrl.replace('data:image/jpeg;base64,', '');
-              } else if (imageUrl.startsWith('data:image/png;base64,')) {
-                imageData = imageUrl.replace('data:image/png;base64,', '');
-              }
-            } else if (imageItem && 'image_data' in imageItem && (imageItem as any).image_data) {
-              imageData = (imageItem as any).image_data;
-            }
-          }
+        if (imageData) {
+          // Use the image-enabled API call with preserved image data
           aiResponse = await sendMessageWithImage(
-            typeof userMessage.content === 'string' ? userMessage.content : '',
+            content,
             imageData,
             'gpt-4o',
             currentMessages
           );
         } else {
-          // Handle text-only messages with GPT-4o
+          // Regular text message
           aiResponse = await sendMessage(
             content,
             'gpt-4o',
