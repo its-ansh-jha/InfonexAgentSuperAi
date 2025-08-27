@@ -82,10 +82,6 @@ export function ChatMessage({ message, useTypingAnimation = false }: ChatMessage
   // Split content into text, code blocks, and math blocks
   const contentParts = extractCodeBlocks(contentString);
   
-  // Debug: Log content parts to console to see what's being extracted
-  if (contentParts.some(part => part.isCode)) {
-    console.log('Code blocks detected:', contentParts.filter(part => part.isCode));
-  }
 
   const copyToClipboard = () => {
     // Only copy text portions, not code blocks
