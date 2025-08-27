@@ -26,24 +26,30 @@ export const ChatHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ c
     const savedChats = localStorage.getItem(STORAGE_KEY);
     const savedCurrentChatId = localStorage.getItem(`${STORAGE_KEY}-current`);
     
+    console.log('Loading chat history on app start:', { savedChats: savedChats ? 'found' : 'none', savedCurrentChatId });
+    
     if (savedChats) {
       try {
         const parsedChats = JSON.parse(savedChats) as Chat[];
+        console.log('Parsed chats from localStorage:', parsedChats.length, 'chats found');
+        
+        if (parsedChats.length > 0) {
+          console.log('First chat messages:', parsedChats[0].messages.length);
+        }
         
         setChats(parsedChats);
         
         // Try to restore the previously selected chat first
-        const savedChat = parsedChats.find(chat => chat.id === savedCurrentChatId);
-        if (savedCurrentChatId && savedChat) {
+        if (savedCurrentChatId && parsedChats.find(chat => chat.id === savedCurrentChatId)) {
+          console.log('Restoring saved current chat:', savedCurrentChatId);
           setCurrentChatId(savedCurrentChatId);
         } else if (parsedChats.length > 0) {
           // Fallback to most recent chat if saved current chat doesn't exist
           const sortedChats = [...parsedChats].sort(
             (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
           );
+          console.log('Setting most recent chat as current:', sortedChats[0].id);
           setCurrentChatId(sortedChats[0].id);
-          // Update the saved current chat ID to match reality
-          localStorage.setItem(`${STORAGE_KEY}-current`, sortedChats[0].id);
         }
       } catch (error) {
         console.error('Failed to parse saved chats:', error);
@@ -51,6 +57,7 @@ export const ChatHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ c
         startNewChat();
       }
     } else {
+      console.log('No saved chats found, starting new chat');
       // If no saved chats, start a new chat
       startNewChat();
     }
@@ -224,19 +231,9 @@ export const ChatHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ c
       updatedAt: new Date().toISOString(),
     };
     
-    
-    setChats(prevChats => {
-      const updatedChats = [newChat, ...prevChats];
-      // Immediately save to prevent data loss
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedChats.slice(0, 10)));
-        localStorage.setItem(`${STORAGE_KEY}-current`, newChat.id);
-      } catch (error) {
-        console.warn('Failed to save new chat:', error);
-      }
-      return updatedChats;
-    });
+    setChats(prevChats => [newChat, ...prevChats]);
     setCurrentChatId(newChat.id);
+    localStorage.setItem(`${STORAGE_KEY}-current`, newChat.id);
     
     return newChat;
   }, []);
@@ -329,10 +326,9 @@ export const ChatHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ c
           })
         }));
         
+        console.log('Immediately saving chat with', messages.length, 'messages to localStorage');
         localStorage.setItem(STORAGE_KEY, JSON.stringify(cleanedChats));
-        if (currentChatId) {
-          localStorage.setItem(`${STORAGE_KEY}-current`, currentChatId);
-        }
+        localStorage.setItem(`${STORAGE_KEY}-current`, currentChatId);
       } catch (error) {
         console.warn('Failed to immediately save chat history:', error);
       }
