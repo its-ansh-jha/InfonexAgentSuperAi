@@ -12,15 +12,17 @@ export async function apiRequest<T = any>(
     url: string;
     method: string;
     data?: unknown | undefined;
+    signal?: AbortSignal;
   }
 ): Promise<T> {
-  const { url, method, data } = options;
+  const { url, method, data, signal } = options;
   
   const res = await fetch(url, {
     method,
     headers: data ? { "Content-Type": "application/json" } : {},
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
+    signal,
   });
 
   await throwIfResNotOk(res);

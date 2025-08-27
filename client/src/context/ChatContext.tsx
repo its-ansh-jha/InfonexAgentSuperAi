@@ -32,9 +32,12 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Update local messages when currentChat changes
   useEffect(() => {
+    console.log('ChatContext: currentChat changed:', currentChat ? `${currentChat.messages.length} messages` : 'no chat');
     if (currentChat) {
+      console.log('ChatContext: Setting messages from currentChat:', currentChat.messages);
       setMessages(currentChat.messages);
     } else {
+      console.log('ChatContext: No current chat, creating new one');
       // If no current chat, create a new one
       startNewChat();
     }
