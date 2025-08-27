@@ -5,7 +5,7 @@ import { useChatHistory } from '@/context/ChatHistoryContext';
 import { Loader2 } from 'lucide-react';
 
 export function ChatContainer() {
-  const { messages, isLoading } = useChat();
+  const { messages, isLoading, lastMessageId } = useChat();
   const { updateCurrentChat } = useChatHistory();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -30,10 +30,11 @@ export function ChatContainer() {
         <div className="absolute top-0 left-0 w-[2px] h-full bg-primary bg-opacity-10"></div>
         
         {messages.map((message, index) => {
-          // Use typing animation for the last AI message and control it with isTyping state
+          // Use typing animation only for the last AI message that was just generated
           const shouldUseTyping = message.role === 'assistant' && 
                                  index === messages.length - 1 && 
-                                 messages.length > 1;
+                                 messages.length > 1 &&
+                                 message.timestamp === lastMessageId;
           
           return (
             <ChatMessage 

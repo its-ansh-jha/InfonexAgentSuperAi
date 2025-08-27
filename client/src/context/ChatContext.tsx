@@ -16,6 +16,7 @@ interface ChatContextType {
   regenerateLastResponse: () => Promise<void>;
   regenerateResponseAtIndex: (messageIndex: number) => Promise<void>;
   clearMessages: () => void;
+  lastMessageId: string | null;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -25,6 +26,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [abortController, setAbortController] = useState<AbortController | null>(null);
+  const [lastMessageId, setLastMessageId] = useState<string | null>(null); // Track the last new message
   const { toast } = useToast();
 
   // Get current chat from ChatHistoryContext
@@ -32,12 +34,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Update local messages when currentChat changes
   useEffect(() => {
-    console.log('ChatContext: currentChat changed:', currentChat ? `${currentChat.messages.length} messages` : 'no chat');
     if (currentChat) {
-      console.log('ChatContext: Setting messages from currentChat:', currentChat.messages);
       setMessages(currentChat.messages);
     } else {
-      console.log('ChatContext: No current chat, creating new one');
       // If no current chat, create a new one
       startNewChat();
     }
@@ -151,7 +150,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setMessages(finalMessages);
       updateCurrentChat(finalMessages);
 
-      // Start typing animation for the AI response
+      // Set this as the last message ID and start typing animation
+      setLastMessageId(newMessage.timestamp);
       setIsTyping(true);
     } catch (error: any) {
       console.error('Error sending message:', error);
@@ -275,6 +275,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const finalMessages = [...messagesUpToUserMessage, newMessage];
       setMessages(finalMessages);
       updateCurrentChat(finalMessages);
+
+      // Set this as the last message ID and start typing animation
+      setLastMessageId(newMessage.timestamp);
+      setIsTyping(true);
 
       toast({
         title: 'Response regenerated',
@@ -701,7 +705,8 @@ Please synthesize this information and provide a helpful response that directly 
       stopTyping,
       regenerateLastResponse,
       regenerateResponseAtIndex,
-      clearMessages
+      clearMessages,
+      lastMessageId
     }}>
       {children}
     </ChatContext.Provider>
