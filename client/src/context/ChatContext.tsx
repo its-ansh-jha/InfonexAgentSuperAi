@@ -130,14 +130,42 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (msg.role === 'user' && Array.isArray(msg.content)) {
             return { ...msg, content: msg.content };
           }
+          // For AI messages with array content (like PDF responses), convert to text properly
+          if (Array.isArray(msg.content)) {
+            const textParts = [];
+            for (const item of msg.content) {
+              if (item.type === 'text' && item.text) {
+                textParts.push(item.text);
+              } else if (item.type === 'pdf_link' && (item as any).pdf_url) {
+                textParts.push(`[PDF document: ${(item as any).title || 'Generated PDF'} - not accessible to AI]`);
+              }
+            }
+            return { ...msg, content: textParts.join('\n') };
+          }
           // For other messages, convert to string
           return { ...msg, content: String(msg.content) };
         });
 
         aiResponse = await sendMessage(content, 'gpt-4o', messagesForAPI);
       } else {
-        // Regular text-only API call
-        aiResponse = await sendMessage(content, 'gpt-4o', currentMessages);
+        // Regular text-only API call - convert AI messages with array content to proper text format
+        const messagesForAPI = currentMessages.map(msg => {
+          // For AI messages with array content (like PDF responses), convert to text properly
+          if (Array.isArray(msg.content)) {
+            const textParts = [];
+            for (const item of msg.content) {
+              if (item.type === 'text' && item.text) {
+                textParts.push(item.text);
+              } else if (item.type === 'pdf_link' && (item as any).pdf_url) {
+                textParts.push(`[PDF document: ${(item as any).title || 'Generated PDF'} - not accessible to AI]`);
+              }
+            }
+            return { ...msg, content: textParts.join('\n') };
+          }
+          return msg;
+        });
+        
+        aiResponse = await sendMessage(content, 'gpt-4o', messagesForAPI);
       }
 
       // Add AI response to the chat
@@ -251,18 +279,50 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (imageData) {
         // Use the image-enabled API call with preserved image data
+        // Convert messages with array content to proper text format for API
+        const messagesForAPI = currentMessages.map(msg => {
+          if (Array.isArray(msg.content)) {
+            const textParts = [];
+            for (const item of msg.content) {
+              if (item.type === 'text' && item.text) {
+                textParts.push(item.text);
+              } else if (item.type === 'pdf_link' && (item as any).pdf_url) {
+                textParts.push(`[PDF document: ${(item as any).title || 'Generated PDF'} - not accessible to AI]`);
+              }
+            }
+            return { ...msg, content: textParts.join('\n') };
+          }
+          return msg;
+        });
+        
         aiResponse = await sendMessageWithImage(
           textContent,
           imageData,
           'gpt-4o',
-          currentMessages
+          messagesForAPI
         );
       } else {
         // Regular text message
+        // Convert messages with array content to proper text format for API
+        const messagesForAPI = currentMessages.map(msg => {
+          if (Array.isArray(msg.content)) {
+            const textParts = [];
+            for (const item of msg.content) {
+              if (item.type === 'text' && item.text) {
+                textParts.push(item.text);
+              } else if (item.type === 'pdf_link' && (item as any).pdf_url) {
+                textParts.push(`[PDF document: ${(item as any).title || 'Generated PDF'} - not accessible to AI]`);
+              }
+            }
+            return { ...msg, content: textParts.join('\n') };
+          }
+          return msg;
+        });
+        
         aiResponse = await sendMessage(
           textContent,
           'gpt-4o',
-          currentMessages
+          messagesForAPI
         );
       }
 
@@ -423,12 +483,28 @@ Please synthesize this information and provide a helpful response that directly 
           { role: 'user', content: refinedPrompt }
         ];
 
+        // Convert messages with array content to proper text format for API
+        const messagesForAPI = currentMessages.filter((msg): msg is Message => 
+          'model' in msg && 'timestamp' in msg
+        ).map(msg => {
+          if (Array.isArray(msg.content)) {
+            const textParts = [];
+            for (const item of msg.content) {
+              if (item.type === 'text' && item.text) {
+                textParts.push(item.text);
+              } else if (item.type === 'pdf_link' && (item as any).pdf_url) {
+                textParts.push(`[PDF document: ${(item as any).title || 'Generated PDF'} - not accessible to AI]`);
+              }
+            }
+            return { ...msg, content: textParts.join('\n') };
+          }
+          return msg;
+        });
+
         const aiResponse = await sendMessage(
           refinedPrompt,
           'gpt-4o-mini',
-          currentMessages.filter((msg): msg is Message => 
-            'model' in msg && 'timestamp' in msg
-          )
+          messagesForAPI
         );
 
         // Add the refined AI response to the chat
@@ -474,18 +550,50 @@ Please synthesize this information and provide a helpful response that directly 
               imageData = (imageItem as any).image_data;
             }
           }
+          // Convert messages with array content to proper text format for API
+          const messagesForAPI = currentMessages.map(msg => {
+            if (Array.isArray(msg.content)) {
+              const textParts = [];
+              for (const item of msg.content) {
+                if (item.type === 'text' && item.text) {
+                  textParts.push(item.text);
+                } else if (item.type === 'pdf_link' && (item as any).pdf_url) {
+                  textParts.push(`[PDF document: ${(item as any).title || 'Generated PDF'} - not accessible to AI]`);
+                }
+              }
+              return { ...msg, content: textParts.join('\n') };
+            }
+            return msg;
+          });
+          
           aiResponse = await sendMessageWithImage(
             typeof userMessage.content === 'string' ? userMessage.content : '',
             imageData,
             'gpt-4o',
-            currentMessages
+            messagesForAPI
           );
         } else {
           // Handle text-only messages with GPT-4o
+          // Convert messages with array content to proper text format for API
+          const messagesForAPI = currentMessages.map(msg => {
+            if (Array.isArray(msg.content)) {
+              const textParts = [];
+              for (const item of msg.content) {
+                if (item.type === 'text' && item.text) {
+                  textParts.push(item.text);
+                } else if (item.type === 'pdf_link' && (item as any).pdf_url) {
+                  textParts.push(`[PDF document: ${(item as any).title || 'Generated PDF'} - not accessible to AI]`);
+                }
+              }
+              return { ...msg, content: textParts.join('\n') };
+            }
+            return msg;
+          });
+          
           aiResponse = await sendMessage(
             content,
             'gpt-4o',
-            currentMessages
+            messagesForAPI
           );
         }
 
