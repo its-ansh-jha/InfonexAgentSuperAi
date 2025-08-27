@@ -100,7 +100,8 @@ export async function sendMessage(
   content: string,
   model: 'gpt-5' | 'gpt-5-mini' | 'gpt-5-nano' | 'gpt-4o' | 'gpt-4o-mini' | 'llama-4-maverick',
   messages: Message[],
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  webSearchEnabled = true
 ): Promise<Message> {
   try {
     // Use the improved apiRequest function
@@ -113,6 +114,7 @@ export async function sendMessage(
       data: {
         model: model,
         messages: messages.map(({ role, content }) => ({ role, content })),
+        webSearchEnabled,
       },
       signal,
     });

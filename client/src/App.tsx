@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { ChatHistoryProvider } from "@/context/ChatHistoryContext";
+import { WebSearchProvider } from "@/context/WebSearchContext";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
@@ -27,8 +28,10 @@ function App() {
       <ThemeProvider>
         <TooltipProvider>
           <ChatHistoryProvider>
-            <Toaster />
-            <Router />
+            <WebSearchProvider>
+              <Toaster />
+              <Router />
+            </WebSearchProvider>
           </ChatHistoryProvider>
         </TooltipProvider>
       </ThemeProvider>

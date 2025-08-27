@@ -4,6 +4,7 @@ import { sendMessage, sendMessageWithImage, uploadImage } from '@/utils/api';
 import { getSystemMessage } from '@/utils/helpers';
 import { useToast } from '@/hooks/use-toast';
 import { useChatHistory } from '@/context/ChatHistoryContext';
+import { useWebSearch } from '@/context/WebSearchContext';
 
 interface ChatContextType {
   messages: Message[];
@@ -31,6 +32,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Get current chat from ChatHistoryContext
   const { currentChat, updateCurrentChat, startNewChat, deleteChat } = useChatHistory();
+  
+  // Get web search setting
+  const { isWebSearchEnabled } = useWebSearch();
 
   // Update local messages when currentChat changes
   useEffect(() => {

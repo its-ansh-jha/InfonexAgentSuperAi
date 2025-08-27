@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect, ChangeEvent } from 'react';
-import { Send, Volume2, ImagePlus, Image, X, Mic, Search, Camera, FolderOpen, Loader2, Square } from 'lucide-react';
+import { Send, Volume2, ImagePlus, Image, X, Mic, Search, Camera, FolderOpen, Loader2, Square, Settings, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChat } from '@/context/ChatContext';
 import { autoResizeTextarea } from '@/utils/helpers';
@@ -16,7 +16,11 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
+import { Switch } from '@/components/ui/switch';
+import { useWebSearch } from '@/context/WebSearchContext';
 
 export function ChatInput() {
   const [input, setInput] = useState('');
@@ -25,12 +29,12 @@ export function ChatInput() {
   const [imageNames, setImageNames] = useState<string[]>([]);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isListening, setIsListening] = useState(false);
-  const [isSearchMode, setIsSearchMode] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const { sendUserMessage, searchAndRespond, isLoading, isTyping, stopGeneration, stopTyping } = useChat();
   const { toast } = useToast();
+  const { isWebSearchEnabled, toggleWebSearch } = useWebSearch();
 
   // Auto-resize textarea on input
   useEffect(() => {
@@ -48,12 +52,10 @@ export function ChatInput() {
     // Store current state before clearing
     const currentInput = input.trim();
     const currentImageFiles = [...imageFiles];
-    const currentSearchMode = isSearchMode;
 
     // Clear state immediately for better UX
     setInput('');
     removeImage(); // This clears all images
-    setIsSearchMode(false);
 
     // Reset textarea height
     if (textareaRef.current) {
@@ -61,13 +63,8 @@ export function ChatInput() {
     }
 
     try {
-      if (currentSearchMode && currentImageFiles.length === 0) {
-        // Use search mode - search and get AI refined response
-        await searchAndRespond(currentInput);
-      } else {
-        // Regular chat mode - send the message with optional images
-        await sendUserMessage(currentInput, currentImageFiles.length > 0 ? currentImageFiles : undefined);
-      }
+      // Send the message with optional images
+      await sendUserMessage(currentInput, currentImageFiles.length > 0 ? currentImageFiles : undefined);
     } catch (error) {
       console.error('Failed to send message:', error);
       // Restore input on error for retry
@@ -273,13 +270,6 @@ export function ChatInput() {
     }
   };
 
-  const toggleSearchMode = () => {
-    setIsSearchMode(!isSearchMode);
-    if (imageFiles.length > 0) {
-      // Clear images when switching to search mode since search doesn't support images
-      removeImage();
-    }
-  };
 
   return (
     <footer className="sticky bottom-0 py-4 bg-neutral-900">
@@ -380,29 +370,55 @@ export function ChatInput() {
 
           <div className="relative flex items-center bg-neutral-800 rounded-full border border-neutral-700 overflow-hidden">
             <div className="flex items-center pl-3 space-x-1">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={toggleSearchMode}
-                      className={`h-9 w-9 rounded-full hover:bg-neutral-700 ${
-                        isSearchMode ? 'text-primary hover:text-primary bg-primary/20' : 'text-neutral-400 hover:text-white'
-                      }`}
-                    >
-                      <Search className="h-5 w-5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top">
-                    <p>{isSearchMode ? 'Exit search mode' : 'Search realtime data'}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <DropdownMenu>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className={`h-9 w-9 rounded-full hover:bg-neutral-700 ${
+                            isWebSearchEnabled ? 'text-primary hover:text-primary bg-primary/20' : 'text-neutral-400 hover:text-white'
+                          }`}
+                          data-testid="button-web-search-menu"
+                        >
+                          <Globe className="h-5 w-5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">
+                      <p>Web Search Settings</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <DropdownMenuContent align="start" className="w-56">
+                  <DropdownMenuLabel>Web Search Tool</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <div className="flex items-center justify-between p-2">
+                    <div className="flex items-center space-x-2">
+                      <Search className="h-4 w-4" />
+                      <span className="text-sm">Web Search</span>
+                    </div>
+                    <Switch
+                      checked={isWebSearchEnabled}
+                      onCheckedChange={toggleWebSearch}
+                      data-testid="switch-web-search"
+                    />
+                  </div>
+                  <div className="px-2 pb-1">
+                    <p className="text-xs text-muted-foreground">
+                      {isWebSearchEnabled 
+                        ? 'GPT-5 can access live web data for current information' 
+                        : 'GPT-5 will only use its training data'
+                      }
+                    </p>
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
-              {!isSearchMode && (
-                <DropdownMenu>
+              <DropdownMenu>
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -437,7 +453,6 @@ export function ChatInput() {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-              )}
             </div>
 
             <textarea
@@ -449,9 +464,7 @@ export function ChatInput() {
               placeholder={
                 isUploadingImage 
                   ? "Processing images..." 
-                  : isSearchMode
-                    ? "Search for realtime information..."
-                    : imageFiles.length > 0
+                  : imageFiles.length > 0
                       ? `Ask about ${imageFiles.length} image${imageFiles.length !== 1 ? 's' : ''}...`
                       : "Ask Anything..."
               }
@@ -512,10 +525,11 @@ export function ChatInput() {
               </span>
             ) : isListening ? (
               <span className="text-red-400">Listening...</span>
-            ) : isSearchMode ? (
-              <span className="text-blue-400">Search mode: Get realtime data refined by GPT-4o-mini</span>
             ) : (
-              <span>Infonex is using GPT-5 to generate human-like text and analyze images</span>
+              <span>
+                Infonex is using GPT-5 to generate human-like text and analyze images
+                {isWebSearchEnabled && <span className="text-blue-400"> • Web search enabled</span>}
+              </span>
             )}
           </div>
         </form>

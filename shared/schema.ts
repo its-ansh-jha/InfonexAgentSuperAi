@@ -89,6 +89,7 @@ export const chatCompletionRequestSchema = z.object({
     })
   ),
   sessionId: z.string().optional(),
+  webSearchEnabled: z.boolean().optional().default(true),
 });
 
 export type ChatCompletionRequest = z.infer<typeof chatCompletionRequestSchema>;
