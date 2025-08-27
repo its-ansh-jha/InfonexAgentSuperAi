@@ -352,3 +352,15 @@ code[class*="language-"] {
 .border-t.border-neutral-800 {
   border-top: 1px solid #30363d !important;
 }
+
+/* Ensure code blocks display properly */
+.bg-neutral-900, .dark\\:bg-neutral-950 {
+  display: block !important;
+  margin: 0.75rem 0 !important;
+}
+
+/* Force code block container visibility */
+.bg-neutral-900 code, .bg-neutral-950 code {
+  display: block !important;
+  color: #e6edf3 !important;
+}
