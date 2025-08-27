@@ -157,6 +157,57 @@ export const ChatHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }
   }, [chats]);
 
+  // Add beforeunload listener to ensure data is saved before page refresh
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      // Force save current chat state before page unload
+      if (chats.length > 0) {
+        try {
+          const maxChats = 10;
+          const recentChats = chats.slice(-maxChats);
+          
+          const cleanedChats = recentChats.map(chat => ({
+            ...chat,
+            messages: chat.messages.map(msg => {
+              if (Array.isArray(msg.content)) {
+                return {
+                  ...msg,
+                  content: msg.content.map(item => {
+                    if (item.type === 'image_url' && (item as any).image_url?.url) {
+                      const url = (item as any).image_url.url;
+                      if (url.startsWith('https://')) {
+                        return item;
+                      } else if (url.startsWith('data:image')) {
+                        return {
+                          ...item,
+                          image_url: {
+                            url: '[Large uploaded image - temporarily removed to save storage]'
+                          }
+                        };
+                      }
+                    }
+                    return item;
+                  })
+                };
+              }
+              return msg;
+            })
+          }));
+          
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(cleanedChats));
+          if (currentChatId) {
+            localStorage.setItem(`${STORAGE_KEY}-current`, currentChatId);
+          }
+        } catch (error) {
+          console.warn('Failed to save chat history before unload:', error);
+        }
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [chats, currentChatId]);
+
   const startNewChat = useCallback(() => {
     const systemMessage = getSystemMessage();
     const welcomeMessage = getWelcomeMessage('gpt-4o-mini');
@@ -185,7 +236,7 @@ export const ChatHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ c
     if (!currentChatId) return;
     
     setChats(prevChats => {
-      return prevChats.map(chat => {
+      const updatedChats = prevChats.map(chat => {
         if (chat.id === currentChatId) {
           // Generate a title from the first user message if it's a new chat with default title
           let title = chat.title;
@@ -230,6 +281,46 @@ export const ChatHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ c
         }
         return chat;
       });
+
+      // Immediately save to localStorage to prevent data loss on refresh
+      try {
+        const maxChats = 10;
+        const recentChats = updatedChats.slice(-maxChats);
+        
+        const cleanedChats = recentChats.map(chat => ({
+          ...chat,
+          messages: chat.messages.map(msg => {
+            if (Array.isArray(msg.content)) {
+              return {
+                ...msg,
+                content: msg.content.map(item => {
+                  if (item.type === 'image_url' && (item as any).image_url?.url) {
+                    const url = (item as any).image_url.url;
+                    if (url.startsWith('https://')) {
+                      return item;
+                    } else if (url.startsWith('data:image')) {
+                      return {
+                        ...item,
+                        image_url: {
+                          url: '[Large uploaded image - temporarily removed to save storage]'
+                        }
+                      };
+                    }
+                  }
+                  return item;
+                })
+              };
+            }
+            return msg;
+          })
+        }));
+        
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(cleanedChats));
+      } catch (error) {
+        console.warn('Failed to immediately save chat history:', error);
+      }
+
+      return updatedChats;
     });
   }, [currentChatId]);
 
