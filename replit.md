@@ -4,13 +4,17 @@
 This is a sophisticated full-stack AI chat application built with React, Express, and PostgreSQL. Successfully cloned from https://github.com/its-ansh-jha/InfonexAgentSuperAi and configured for Replit environment.
 
 ## Project Status
+- **2025-01-27**: Successfully migrated to Replit environment with proper security configuration
+- **2025-01-27**: Database schema updated and search functionality restored to use correct model
 - **2025-01-12**: Fresh repository cloned and dependencies installed
 - **2025-01-12**: Enhanced image upload functionality with camera capture and photo gallery options
 - **2025-01-12**: Added image preview in chat input area and message display
 - All npm packages successfully installed (514 packages)
 - Build and start scripts configured and ready
-- PostgreSQL database available
+- PostgreSQL database available and properly configured
 - Core features operational and enhanced
+- **GPT-5 Integration**: Main chat powered by GPT-5 with gpt-5-mini for optimized performance
+- **Search Functionality**: Uses gpt-4o-mini-search-preview for specialized search capabilities
 
 ## Scripts Configuration
 - **Development**: `npm run dev` - Runs with tsx and hot reload
