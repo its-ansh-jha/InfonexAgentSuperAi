@@ -211,7 +211,7 @@ export const ChatHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   const startNewChat = useCallback(() => {
     const systemMessage = getSystemMessage();
-    const welcomeMessage = getWelcomeMessage('gpt-4o-mini');
+    const welcomeMessage = getWelcomeMessage('gpt-5-mini');
     
     const newChat: Chat = {
       id: nanoid(),

@@ -41,7 +41,7 @@ export const messages = pgTable("messages", {
   id: serial("id").primaryKey(),
   role: text("role").notNull(), // user, assistant, system
   content: text("content").notNull(),
-  model: text("model").notNull(), // gpt-4o-mini, deepseek-r1
+  model: text("model").notNull(), // gpt-5, gpt-5-mini, gpt-5-nano, deepseek-r1
   timestamp: timestamp("timestamp").notNull().defaultNow(),
   sessionId: integer("session_id").references(() => chatSessions.id).notNull(),
 });
@@ -78,7 +78,7 @@ const textContentSchema = z.object({
 
 // Request schema for chat completions
 export const chatCompletionRequestSchema = z.object({
-  model: z.enum(["gpt-4o", "gpt-4o-mini", "deepseek-r1", "llama-4-maverick"]),
+  model: z.enum(["gpt-5", "gpt-5-mini", "gpt-5-nano", "gpt-4o", "gpt-4o-mini", "deepseek-r1", "llama-4-maverick"]),
   messages: z.array(
     z.object({
       role: z.enum(["user", "assistant", "system"]),
@@ -99,7 +99,7 @@ export const chatCompletionResponseSchema = z.object({
     role: z.enum(["assistant"]),
     content: z.string(),
   }),
-  model: z.enum(["gpt-4o", "gpt-4o-mini", "deepseek-r1", "llama-4-maverick"]),
+  model: z.enum(["gpt-5", "gpt-5-mini", "gpt-5-nano", "gpt-4o", "gpt-4o-mini", "deepseek-r1", "llama-4-maverick"]),
 });
 
 export type ChatCompletionResponse = z.infer<typeof chatCompletionResponseSchema>;

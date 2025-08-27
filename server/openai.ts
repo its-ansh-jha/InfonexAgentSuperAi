@@ -3,7 +3,7 @@ import { ChatCompletionRequest, ChatCompletionResponse } from "@shared/schema";
 import { log } from "../vite";
 
 // Use the latest OpenAI model with vision support
-const MODEL = "gpt-4o-mini";
+const MODEL = "gpt-5-mini";
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -76,7 +76,7 @@ export async function generateOpenAIResponse(
         role: "assistant",
         content: response.choices[0].message.content,
       },
-      model: "gpt-4o",
+      model: "gpt-5",
     };
   } catch (error: any) {
     log(`OpenAI API error: ${error.message}`, "error");

@@ -29,7 +29,7 @@ export async function searchOpenAI(query: string): Promise<SearchResult[]> {
 
     // Use GPT-4o-mini with search capabilities
     const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini-search-preview",
+      model: "gpt-5-mini",
       messages: [
         {
           role: "system",
@@ -116,7 +116,7 @@ export async function searchOpenAIEnhanced(query: string): Promise<any> {
 
     // Use the new search preview feature
     const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini-search-preview",
+      model: "gpt-5-mini",
       messages: [
         {
           role: "user",

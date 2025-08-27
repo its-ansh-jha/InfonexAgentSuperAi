@@ -104,7 +104,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const userMessage: Message = {
       role: 'user',
       content: messageContent,
-      model: 'gpt-4o',
+      model: 'gpt-5',
       timestamp: new Date().toISOString(),
     };
 
@@ -146,7 +146,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return { ...msg, content: String(msg.content) };
         });
 
-        aiResponse = await sendMessage(content, 'gpt-4o', messagesForAPI);
+        aiResponse = await sendMessage(content, 'gpt-5', messagesForAPI);
       } else {
         // Regular text-only API call - convert AI messages with array content to proper text format
         const messagesForAPI = currentMessages.map(msg => {
@@ -165,7 +165,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return msg;
         });
         
-        aiResponse = await sendMessage(content, 'gpt-4o', messagesForAPI);
+        aiResponse = await sendMessage(content, 'gpt-5', messagesForAPI);
       }
 
       // Add AI response to the chat
@@ -206,7 +206,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const errorMessageForUI: Message = {
         role: 'assistant',
         content: 'I apologize, but I encountered an error processing your request. Please try again later.',
-        model: 'gpt-4o',
+        model: 'gpt-5',
         timestamp: new Date().toISOString(),
       };
 
@@ -298,7 +298,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         aiResponse = await sendMessageWithImage(
           textContent,
           imageData,
-          'gpt-4o',
+          'gpt-5',
           messagesForAPI
         );
       } else {
@@ -321,7 +321,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         aiResponse = await sendMessage(
           textContent,
-          'gpt-4o',
+          'gpt-5',
           messagesForAPI
         );
       }
@@ -370,7 +370,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const errorMessageForUI: Message = {
         role: 'assistant',
         content: 'I apologize, but I encountered an error generating a new response. Please try again later.',
-        model: 'gpt-4o',
+        model: 'gpt-5',
         timestamp: new Date().toISOString(),
       };
 
@@ -503,7 +503,7 @@ Please synthesize this information and provide a helpful response that directly 
 
         const aiResponse = await sendMessage(
           refinedPrompt,
-          'gpt-4o-mini',
+          'gpt-5-mini',
           messagesForAPI
         );
 
@@ -569,7 +569,7 @@ Please synthesize this information and provide a helpful response that directly 
           aiResponse = await sendMessageWithImage(
             typeof userMessage.content === 'string' ? userMessage.content : '',
             imageData,
-            'gpt-4o',
+            'gpt-5',
             messagesForAPI
           );
         } else {
@@ -592,7 +592,7 @@ Please synthesize this information and provide a helpful response that directly 
           
           aiResponse = await sendMessage(
             content,
-            'gpt-4o',
+            'gpt-5',
             messagesForAPI
           );
         }
@@ -638,7 +638,7 @@ Please synthesize this information and provide a helpful response that directly 
       const errorMessageForUI: Message = {
         role: 'assistant',
         content: 'I apologize, but I encountered an error generating a new response. Please try again later.',
-        model: 'gpt-4o',
+        model: 'gpt-5',
         timestamp: new Date().toISOString(),
       };
 
@@ -659,7 +659,7 @@ Please synthesize this information and provide a helpful response that directly 
     const userMessage: Message = {
       role: 'user',
       content: `🔍 ${query}`,
-      model: 'gpt-4o',
+      model: 'gpt-5',
       timestamp: new Date().toISOString(),
     };
 
@@ -723,7 +723,7 @@ Please synthesize this information and provide a helpful response that directly 
 
       const aiResponse = await sendMessage(
         refinedPrompt,
-        'gpt-4o-mini',
+        'gpt-5-mini',
         currentMessages.filter((msg): msg is Message => 
           'model' in msg && 'timestamp' in msg
         )
@@ -769,7 +769,7 @@ Please synthesize this information and provide a helpful response that directly 
       const errorMessageForUI: Message = {
         role: 'assistant',
         content: 'I apologize, but I encountered an error while searching for information. Please try again later.',
-        model: 'gpt-4o-mini',
+        model: 'gpt-5-mini',
         timestamp: new Date().toISOString(),
       };
 

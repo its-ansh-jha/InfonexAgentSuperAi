@@ -41,7 +41,7 @@ export async function uploadImage(file: File): Promise<string> {
 export async function sendMessageWithImage(
   content: string,
   imageData: string | null,
-  model: 'gpt-4o' | 'gpt-4o-mini' | 'llama-4-maverick',
+  model: 'gpt-5' | 'gpt-5-mini' | 'gpt-5-nano' | 'gpt-4o' | 'gpt-4o-mini' | 'llama-4-maverick',
   messages: Message[],
   signal?: AbortSignal
 ): Promise<Message> {
@@ -98,7 +98,7 @@ export async function sendMessageWithImage(
 
 export async function sendMessage(
   content: string,
-  model: 'gpt-4o' | 'gpt-4o-mini' | 'llama-4-maverick',
+  model: 'gpt-5' | 'gpt-5-mini' | 'gpt-5-nano' | 'gpt-4o' | 'gpt-4o-mini' | 'llama-4-maverick',
   messages: Message[],
   signal?: AbortSignal
 ): Promise<Message> {
