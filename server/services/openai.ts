@@ -511,8 +511,8 @@ export async function generateOpenAIResponse(
       const toolMessages = [];
       
       for (const toolCall of responseMessage.tool_calls) {
-        const functionName = toolCall.function.name;
-        const functionArgs = JSON.parse(toolCall.function.arguments || '{}');
+        const functionName = (toolCall as any).function?.name || toolCall.name;
+        const functionArgs = JSON.parse((toolCall as any).function?.arguments || toolCall.arguments || '{}');
         
         const toolResult = await executeToolCall(functionName, functionArgs);
         
@@ -621,8 +621,8 @@ export async function generateOpenAIResponse(
         const additionalToolMessages = [];
         
         for (const toolCall of finalMessage.tool_calls) {
-          const functionName = toolCall.function.name;
-          const functionArgs = JSON.parse(toolCall.function.arguments || '{}');
+          const functionName = (toolCall as any).function?.name || toolCall.name;
+          const functionArgs = JSON.parse((toolCall as any).function?.arguments || toolCall.arguments || '{}');
           
           const toolResult = await executeToolCall(functionName, functionArgs);
           
