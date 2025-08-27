@@ -279,24 +279,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/chat-sessions", async (req, res) => {
     try {
-      const limit = parseInt(req.query.limit as string) || 50; // Default to 50 sessions
-      const offset = parseInt(req.query.offset as string) || 0;
-
       const allSessions = await db
         .select()
         .from(chatSessions)
-        .orderBy(chatSessions.updatedAt)
-        .limit(limit)
-        .offset(offset);
+        .orderBy(chatSessions.updatedAt);
 
-      return res.status(200).json({
-        sessions: allSessions,
-        pagination: {
-          limit,
-          offset,
-          hasMore: allSessions.length === limit
-        }
-      });
+      return res.status(200).json(allSessions);
     } catch (error: any) {
       log(`Error fetching chat sessions: ${error.message}`, "error");
       return res.status(500).json({ message: error.message || "Failed to fetch chat sessions" });
@@ -306,8 +294,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/chat-sessions/:id", async (req, res) => {
     try {
       const sessionId = parseInt(req.params.id);
-      const limit = parseInt(req.query.limit as string) || 100; // Default to 100 messages
-      const offset = parseInt(req.query.offset as string) || 0;
       
       if (isNaN(sessionId)) {
         return res.status(400).json({ message: "Invalid session ID" });
@@ -326,18 +312,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .select()
         .from(messages)
         .where(eq(messages.sessionId, sessionId))
-        .orderBy(messages.timestamp)
-        .limit(limit)
-        .offset(offset);
+        .orderBy(messages.timestamp);
 
       return res.status(200).json({
         ...session,
-        messages: sessionMessages,
-        pagination: {
-          limit,
-          offset,
-          hasMore: sessionMessages.length === limit
-        }
+        messages: sessionMessages
       });
     } catch (error: any) {
       log(`Error fetching chat session: ${error.message}`, "error");
