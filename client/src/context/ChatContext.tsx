@@ -3,7 +3,7 @@ import { Message } from '@/types';
 import { sendMessage, sendMessageWithImage, uploadImage } from '@/utils/api';
 import { getSystemMessage } from '@/utils/helpers';
 import { useToast } from '@/hooks/use-toast';
-import { useChatHistory } from '@/context/ChatHistoryContext';
+import { useChatHistory, Chat } from '@/context/ChatHistoryContext';
 
 interface ChatContextType {
   messages: Message[];
@@ -30,17 +30,18 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { toast } = useToast();
 
   // Get current chat from ChatHistoryContext
-  const { currentChat, updateCurrentChat, startNewChat, deleteChat } = useChatHistory();
+  const { currentChat, updateCurrentChat, startNewChat, deleteChat, chats, currentChatId, createNewChat, addMessageToCurrentChat } = useChatHistory();
 
-  // Update local messages when currentChat changes
+  // Update local messages when current chat changes
   useEffect(() => {
+    const currentChat = chats.find(chat => chat.id === currentChatId);
     if (currentChat) {
       setMessages(currentChat.messages);
     } else {
       // If no current chat, create a new one
       startNewChat();
     }
-  }, [currentChat, startNewChat]);
+  }, [currentChatId, chats, startNewChat]);
 
   // Store system message for API requests but don't display it
   const systemMessage = getSystemMessage();
@@ -111,14 +112,21 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Add user message to the chat
     const updatedMessages = [...messages, userMessage];
     setMessages(updatedMessages);
-    updateCurrentChat(updatedMessages);
+
+    // Ensure we have a current chat session
+    let sessionId = currentChatId;
+    if (!sessionId) {
+      sessionId = await createNewChat();
+    }
+    addMessageToCurrentChat(userMessage, sessionId!);
+
 
     // Show loading state immediately, including for image processing
     setIsLoading(true);
 
     try {
       // Get current messages at the time of sending, including system message for AI context
-      const currentMessages = [systemMessage, ...messages, userMessage];
+      const currentMessages = [systemMessage, ...updatedMessages];
 
       let aiResponse;
 
@@ -164,7 +172,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
           return msg;
         });
-        
+
         aiResponse = await sendMessage(content, 'gpt-5', messagesForAPI);
       }
 
@@ -176,7 +184,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const finalMessages = [...updatedMessages, newMessage];
       setMessages(finalMessages);
-      updateCurrentChat(finalMessages);
+      updateCurrentChat(finalMessages, sessionId!);
+
 
       // Set this as the last message ID and start typing animation
       setLastMessageId(newMessage.timestamp);
@@ -212,12 +221,12 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const finalMessages = [...updatedMessages, errorMessageForUI];
       setMessages(finalMessages);
-      updateCurrentChat(finalMessages);
+      updateCurrentChat(finalMessages, sessionId!);
     } finally {
       setIsLoading(false);
       setAbortController(null);
     }
-  }, [messages, toast, updateCurrentChat, systemMessage]);
+  }, [messages, toast, updateCurrentChat, systemMessage, isLoading, currentChatId, createNewChat]);
 
   // Function to regenerate the last AI response
   const regenerateLastResponse = useCallback(async () => {
@@ -294,7 +303,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
           return msg;
         });
-        
+
         aiResponse = await sendMessageWithImage(
           textContent,
           imageData,
@@ -318,7 +327,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
           return msg;
         });
-        
+
         aiResponse = await sendMessage(
           textContent,
           'gpt-5',
@@ -383,17 +392,13 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [messages, toast, updateCurrentChat, systemMessage]);
 
-  const clearMessages = useCallback(() => {
-    // Delete the current chat if it exists, then start a new one
-    if (currentChat && currentChat.id) {
-      deleteChat(currentChat.id);
-    } else {
-      // If no current chat, just start a new one
-      startNewChat();
-    }
-    // Reset local messages
+  const clearMessages = useCallback(async () => {
     setMessages([]);
-  }, [currentChat, deleteChat, startNewChat]);
+    // Create a new chat session when clearing messages
+    if (currentChatId) {
+      await createNewChat();
+    }
+  }, [currentChatId, createNewChat]);
 
   // Function to regenerate a response for a specific user message by index
   const regenerateResponseAtIndex = useCallback(async (userMessageIndex: number) => {
@@ -420,8 +425,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     try {
       // Extract content from user message
-      const content = typeof userMessage.content === 'string' 
-        ? userMessage.content 
+      const content = typeof userMessage.content === 'string'
+        ? userMessage.content
         : 'Could not retrieve message content';
 
       // Check if this is a search message
@@ -447,12 +452,12 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const searchData = await searchResponse.json();
 
         // Create a refined prompt with search results for GPT-4o-mini
-        const searchResults = searchData.organic?.slice(0, 5).map((result: any) => 
+        const searchResults = searchData.organic?.slice(0, 5).map((result: any) =>
           `Title: ${result.title}\nSnippet: ${result.snippet}\nURL: ${result.link}`
         ).join('\n\n') || 'No search results found.';
 
         // Check if this is a question about who developed/created the AI
-        const isDeveloperQuery = searchQuery.toLowerCase().includes('who developed') || 
+        const isDeveloperQuery = searchQuery.toLowerCase().includes('who developed') ||
                                 searchQuery.toLowerCase().includes('who created') ||
                                 searchQuery.toLowerCase().includes('who made') ||
                                 searchQuery.toLowerCase().includes('developer') ||
@@ -484,7 +489,7 @@ Please synthesize this information and provide a helpful response that directly 
         ];
 
         // Convert messages with array content to proper text format for API
-        const messagesForAPI = currentMessages.filter((msg): msg is Message => 
+        const messagesForAPI = currentMessages.filter((msg): msg is Message =>
           'model' in msg && 'timestamp' in msg
         ).map(msg => {
           if (Array.isArray(msg.content)) {
@@ -501,6 +506,12 @@ Please synthesize this information and provide a helpful response that directly 
           return msg;
         });
 
+        // Ensure we have a current chat session
+        let sessionId = currentChatId;
+        if (!sessionId) {
+          sessionId = await createNewChat();
+        }
+
         const aiResponse = await sendMessage(
           refinedPrompt,
           'gpt-5-mini',
@@ -515,7 +526,7 @@ Please synthesize this information and provide a helpful response that directly 
 
         const finalMessages = [...messagesUpToUserMessage, newMessage];
         setMessages(finalMessages);
-        updateCurrentChat(finalMessages);
+        updateCurrentChat(finalMessages, sessionId!);
 
         toast({
           title: 'Search response regenerated',
@@ -528,7 +539,7 @@ Please synthesize this information and provide a helpful response that directly 
         const currentMessages = [systemMessage, ...messagesUpToUserMessage];
 
         // Check if the message contains image data
-        const hasImage = Array.isArray(userMessage.content) && 
+        const hasImage = Array.isArray(userMessage.content) &&
            userMessage.content.some((item: any) => item.type === 'image_url' || item.type === 'image');
 
         let aiResponse;
@@ -536,7 +547,7 @@ Please synthesize this information and provide a helpful response that directly 
           // Handle image messages with GPT-4o
           let imageData = null;
           if (Array.isArray(userMessage.content)) {
-            const imageItem = userMessage.content.find((item: any) => 
+            const imageItem = userMessage.content.find((item: any) =>
               item.type === 'image_url' || item.type === 'image'
             );
             if (imageItem && 'image_url' in imageItem && (imageItem as any).image_url?.url) {
@@ -565,7 +576,7 @@ Please synthesize this information and provide a helpful response that directly 
             }
             return msg;
           });
-          
+
           aiResponse = await sendMessageWithImage(
             typeof userMessage.content === 'string' ? userMessage.content : '',
             imageData,
@@ -589,7 +600,7 @@ Please synthesize this information and provide a helpful response that directly 
             }
             return msg;
           });
-          
+
           aiResponse = await sendMessage(
             content,
             'gpt-5',
@@ -665,7 +676,13 @@ Please synthesize this information and provide a helpful response that directly 
 
     const updatedMessages = [...messages, userMessage];
     setMessages(updatedMessages);
-    updateCurrentChat(updatedMessages);
+
+    // Ensure we have a current chat session
+      let sessionId = currentChatId;
+      if (!sessionId) {
+        sessionId = await createNewChat();
+      }
+    updateCurrentChat(updatedMessages, sessionId!);
     setIsLoading(true);
 
     try {
@@ -685,12 +702,12 @@ Please synthesize this information and provide a helpful response that directly 
       const searchData = await searchResponse.json();
 
       // Create a refined prompt with search results for GPT-4o-mini
-      const searchResults = searchData.organic?.slice(0, 5).map((result: any) => 
+      const searchResults = searchData.organic?.slice(0, 5).map((result: any) =>
         `Title: ${result.title}\nSnippet: ${result.snippet}\nURL: ${result.link}`
       ).join('\n\n') || 'No search results found.';
 
       // Check if this is a question about who developed/created the AI
-      const isDeveloperQuery = query.toLowerCase().includes('who developed') || 
+      const isDeveloperQuery = query.toLowerCase().includes('who developed') ||
                               query.toLowerCase().includes('who created') ||
                               query.toLowerCase().includes('who made') ||
                               query.toLowerCase().includes('developer') ||
@@ -724,7 +741,7 @@ Please synthesize this information and provide a helpful response that directly 
       const aiResponse = await sendMessage(
         refinedPrompt,
         'gpt-5-mini',
-        currentMessages.filter((msg): msg is Message => 
+        currentMessages.filter((msg): msg is Message =>
           'model' in msg && 'timestamp' in msg
         )
       );
@@ -737,7 +754,7 @@ Please synthesize this information and provide a helpful response that directly 
 
       const finalMessages = [...updatedMessages, newMessage];
       setMessages(finalMessages);
-      updateCurrentChat(finalMessages);
+      updateCurrentChat(finalMessages, sessionId!);
 
       toast({
         title: 'Search completed',
@@ -746,7 +763,7 @@ Please synthesize this information and provide a helpful response that directly 
       });
     } catch (error: any) {
       console.error('Failed to search and respond:', error);
-      
+
       // Extract meaningful error message
       let errorMessage = 'Failed to search for information';
 
@@ -757,7 +774,7 @@ Please synthesize this information and provide a helpful response that directly 
       } else if (typeof error === 'string') {
         errorMessage = error;
       }
-      
+
       console.error('Detailed search error:', errorMessage);
       toast({
         title: 'Error',
@@ -775,12 +792,12 @@ Please synthesize this information and provide a helpful response that directly 
 
       const finalMessages = [...updatedMessages, errorMessageForUI];
       setMessages(finalMessages);
-      updateCurrentChat(finalMessages);
+      updateCurrentChat(finalMessages, sessionId!);
     } finally {
       setIsLoading(false);
       setAbortController(null);
     }
-  }, [messages, toast, updateCurrentChat, systemMessage, isLoading]);
+  }, [messages, toast, updateCurrentChat, systemMessage, isLoading, currentChatId, createNewChat]);
 
   // Stop generation function
   const stopGeneration = useCallback(() => {
@@ -803,8 +820,8 @@ Please synthesize this information and provide a helpful response that directly 
   }, []);
 
   return (
-    <ChatContext.Provider value={{ 
-      messages, 
+    <ChatContext.Provider value={{
+      messages,
       sendUserMessage,
       searchAndRespond,
       isLoading,
