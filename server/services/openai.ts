@@ -9,7 +9,7 @@ import { nanoid } from "nanoid";
 import PDFDocument from "pdfkit";
 
 // Use the latest OpenAI model with vision support
-const MODEL = "gpt-4o";
+const MODEL = "gpt-5";
 
 /**
  * Generate and store a PDF document in the database
@@ -348,10 +348,10 @@ export async function generateOpenAIMiniResponse(
       throw new Error("OpenAI Mini API key is not configured.");
     }
 
-    log(`Sending request to gpt-4o-mini for search refinement`);
+    log(`Sending request to gpt-5-mini for search refinement`);
 
     const response = await openaiMini.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-5-mini",
       messages: request.messages as any,
     });
 
@@ -364,7 +364,7 @@ export async function generateOpenAIMiniResponse(
         role: "assistant",
         content: response.choices[0].message.content,
       },
-      model: "gpt-4o-mini",
+      model: "gpt-5-mini",
     };
   } catch (error: any) {
     log(`OpenAI Mini API error: ${error.message}`, "error");
