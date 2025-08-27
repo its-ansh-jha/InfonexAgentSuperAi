@@ -219,3 +219,124 @@
   height: 1px;
   background: linear-gradient(90deg, transparent, rgba(var(--primary), 0.5), transparent);
 }
+
+/* Math rendering styles */
+.math-block {
+  margin: 1rem 0;
+  text-align: center;
+  overflow-x: auto;
+}
+
+.math-inline {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* KaTeX styling overrides for dark theme */
+.katex {
+  color: hsl(var(--foreground)) !important;
+}
+
+.katex .mord {
+  color: hsl(var(--foreground)) !important;
+}
+
+.katex .mbin, .katex .mrel {
+  color: hsl(var(--accent)) !important;
+}
+
+.katex .mopen, .katex .mclose {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+.katex .mpunct {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+/* Code block syntax highlighting overrides */
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata {
+  color: #6a737d !important;
+}
+
+.token.punctuation {
+  color: #d1d5da !important;
+}
+
+.token.property,
+.token.tag,
+.token.constant,
+.token.symbol,
+.token.deleted {
+  color: #f97583 !important;
+}
+
+.token.boolean,
+.token.number {
+  color: #79b8ff !important;
+}
+
+.token.selector,
+.token.attr-name,
+.token.string,
+.token.char,
+.token.builtin,
+.token.inserted {
+  color: #9ecbff !important;
+}
+
+.token.operator,
+.token.entity,
+.token.url,
+.language-css .token.string,
+.style .token.string,
+.token.variable {
+  color: #d1d5da !important;
+}
+
+.token.atrule,
+.token.attr-value,
+.token.function,
+.token.class-name {
+  color: #b392f0 !important;
+}
+
+.token.keyword {
+  color: #ff7b72 !important;
+}
+
+.token.regex,
+.token.important {
+  color: #ffab70 !important;
+}
+
+.token.important,
+.token.bold {
+  font-weight: bold;
+}
+
+.token.italic {
+  font-style: italic;
+}
+
+.token.entity {
+  cursor: help;
+}
+
+/* Custom code block styling */
+pre[class*="language-"] {
+  background: #0d1117 !important;
+  border: 1px solid #30363d !important;
+  border-radius: 0.375rem !important;
+  margin: 0 !important;
+}
+
+code[class*="language-"] {
+  background: transparent !important;
+  color: #e6edf3 !important;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace !important;
+  font-size: 0.875rem !important;
+  line-height: 1.45 !important;
+}

@@ -1,8 +1,31 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Copy, Check, Download, Code, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
+import Prism from 'prismjs';
+
+// Import core Prism languages
+import 'prismjs/components/prism-javascript';
+import 'prismjs/components/prism-typescript';
+import 'prismjs/components/prism-python';
+import 'prismjs/components/prism-java';
+import 'prismjs/components/prism-c';
+import 'prismjs/components/prism-cpp';
+import 'prismjs/components/prism-csharp';
+import 'prismjs/components/prism-php';
+import 'prismjs/components/prism-ruby';
+import 'prismjs/components/prism-go';
+import 'prismjs/components/prism-rust';
+import 'prismjs/components/prism-sql';
+import 'prismjs/components/prism-bash';
+import 'prismjs/components/prism-yaml';
+import 'prismjs/components/prism-json';
+import 'prismjs/components/prism-css';
+import 'prismjs/components/prism-markup';
+
+// Import Prism theme
+import 'prismjs/themes/prism-dark.css';
 
 interface CodeBlockProps {
   code: string;
@@ -12,6 +35,41 @@ interface CodeBlockProps {
 export function CodeBlock({ code, language = '' }: CodeBlockProps) {
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
+  const [highlightedCode, setHighlightedCode] = useState('');
+
+  // Language mapping for Prism
+  const getPrismLanguage = (lang: string): string => {
+    const langMap: { [key: string]: string } = {
+      'js': 'javascript',
+      'ts': 'typescript',
+      'py': 'python',
+      'rb': 'ruby',
+      'cs': 'csharp',
+      'c++': 'cpp',
+      'sh': 'bash',
+      'shell': 'bash',
+      'ps1': 'powershell',
+      'yml': 'yaml',
+      'html': 'markup',
+      'htm': 'markup',
+      'xml': 'markup'
+    };
+    return langMap[lang.toLowerCase()] || lang.toLowerCase();
+  };
+
+  useEffect(() => {
+    if (language && code) {
+      const prismLang = getPrismLanguage(language);
+      if (Prism.languages[prismLang]) {
+        const highlighted = Prism.highlight(code, Prism.languages[prismLang], prismLang);
+        setHighlightedCode(highlighted);
+      } else {
+        setHighlightedCode(code);
+      }
+    } else {
+      setHighlightedCode(code);
+    }
+  }, [code, language]);
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(code);
@@ -68,7 +126,10 @@ export function CodeBlock({ code, language = '' }: CodeBlockProps) {
       )}
       
       <pre className="p-4 overflow-x-auto">
-        <code className="font-mono text-neutral-200 text-sm">{code}</code>
+        <code 
+          className={`font-mono text-sm ${language ? `language-${getPrismLanguage(language)}` : ''}`}
+          dangerouslySetInnerHTML={{ __html: highlightedCode }}
+        />
       </pre>
       
       <div className="border-t border-neutral-800 py-1 px-2 flex items-center gap-1">
