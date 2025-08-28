@@ -7,7 +7,6 @@ import { db } from "../db";
 import { images, pdfs } from "@shared/schema";
 import { nanoid } from "nanoid";
 import PDFDocument from "pdfkit";
-import { calculateTotalTokenUsage, trackTokenUsage, getTotalTokensSent } from "../utils/tokenCounter";
 
 // Use the latest OpenAI model with vision support
 const MODEL = "gpt-5";
@@ -494,16 +493,6 @@ export async function generateOpenAIResponse(
     // Add system message with current date
     const messagesWithDate = [systemMessage, ...messages as any];
 
-    // Calculate and track token usage
-    const tokenUsage = calculateTotalTokenUsage(
-      messagesWithDate,
-      availableTools,
-      systemMessage.content
-    );
-    
-    trackTokenUsage(tokenUsage);
-    log(`📊 Sending ${tokenUsage.total} tokens to GPT-5 (Messages: ${tokenUsage.messages}, Tools: ${tokenUsage.tools}, System: ${tokenUsage.systemPrompt})`);
-
     // Initial AI response with tools
     let response = await openai.chat.completions.create({
       model: MODEL,
@@ -614,21 +603,10 @@ export async function generateOpenAIResponse(
         };
       }
 
-      // Calculate tokens for follow-up request
-      const followUpMessages = [systemMessage, ...updatedMessages];
-      const followUpTokenUsage = calculateTotalTokenUsage(
-        followUpMessages,
-        availableTools,
-        systemMessage.content
-      );
-      
-      trackTokenUsage(followUpTokenUsage);
-      log(`📊 Sending follow-up ${followUpTokenUsage.total} tokens to GPT-5`);
-
       // Get final response after tool execution - allow for additional tool calls
       const finalResponse = await openai.chat.completions.create({
         model: MODEL,
-        messages: followUpMessages,
+        messages: [systemMessage, ...updatedMessages],
         tools: availableTools,
         tool_choice: "auto"
       });
@@ -728,19 +706,9 @@ export async function generateOpenAIResponse(
           ...additionalToolMessages
         ];
 
-        const secondRoundMessages = [systemMessage, ...secondFinalMessages];
-        const secondRoundTokenUsage = calculateTotalTokenUsage(
-          secondRoundMessages,
-          [],
-          systemMessage.content
-        );
-        
-        trackTokenUsage(secondRoundTokenUsage);
-        log(`📊 Sending second round ${secondRoundTokenUsage.total} tokens to GPT-5`);
-
         const secondFinalResponse = await openai.chat.completions.create({
           model: MODEL,
-          messages: secondRoundMessages,
+          messages: [systemMessage, ...secondFinalMessages],
         });
 
         return {
