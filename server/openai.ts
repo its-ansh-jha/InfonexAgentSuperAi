@@ -314,26 +314,242 @@ const availableTools = [
   {
     type: "function" as const,
     function: {
-      name: "generate_qr_code",
-      description: "Generate QR codes for URLs, text, contact information, or WiFi credentials",
+      name: "extract_text_from_image",
+      description: "Extract and analyze text from images using advanced OCR technology",
       parameters: {
         type: "object",
         properties: {
-          data: {
+          image_url: {
             type: "string",
-            description: "Data to encode in the QR code (URL, text, contact info, etc.)"
+            description: "URL or data URI of the image to analyze"
           },
-          size: {
-            type: "number",
-            description: "Size of QR code in pixels (default 256)"
-          },
-          format: {
+          language: {
             type: "string",
-            enum: ["png", "svg"],
-            description: "Output format (default png)"
+            description: "Language hint for OCR (auto, en, es, fr, etc.)"
           }
         },
-        required: ["data"]
+        required: ["image_url"]
+      }
+    }
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "generate_audio",
+      description: "Generate high-quality audio from text using advanced text-to-speech",
+      parameters: {
+        type: "object",
+        properties: {
+          text: {
+            type: "string",
+            description: "Text to convert to speech"
+          },
+          voice: {
+            type: "string",
+            enum: ["alloy", "echo", "fable", "onyx", "nova", "shimmer"],
+            description: "Voice type for speech generation"
+          },
+          speed: {
+            type: "number",
+            description: "Speech speed (0.25 to 4.0, default 1.0)"
+          }
+        },
+        required: ["text"]
+      }
+    }
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "detect_language",
+      description: "Detect the language of text with confidence scores and linguistic analysis",
+      parameters: {
+        type: "object",
+        properties: {
+          text: {
+            type: "string",
+            description: "Text to analyze for language detection"
+          }
+        },
+        required: ["text"]
+      }
+    }
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "get_crypto_price",
+      description: "Get real-time cryptocurrency prices and market data",
+      parameters: {
+        type: "object",
+        properties: {
+          symbol: {
+            type: "string",
+            description: "Cryptocurrency symbol (bitcoin, ethereum, cardano, etc.)"
+          },
+          currency: {
+            type: "string",
+            description: "Currency for price display (usd, eur, btc, etc.)"
+          }
+        },
+        required: ["symbol"]
+      }
+    }
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "get_stock_data",
+      description: "Get stock market data, prices, and technical indicators",
+      parameters: {
+        type: "object",
+        properties: {
+          symbol: {
+            type: "string",
+            description: "Stock symbol (AAPL, TSLA, GOOGL, etc.)"
+          },
+          period: {
+            type: "string",
+            enum: ["1d", "5d", "1mo", "3mo", "6mo", "1y"],
+            description: "Time period for analysis"
+          }
+        },
+        required: ["symbol"]
+      }
+    }
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "monitor_system",
+      description: "Monitor system performance, resources, and health metrics",
+      parameters: {
+        type: "object",
+        properties: {
+          metric: {
+            type: "string",
+            enum: ["all", "memory", "cpu", "disk", "network"],
+            description: "System metric to monitor"
+          }
+        }
+      }
+    }
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "query_database",
+      description: "Execute database queries and perform data analysis",
+      parameters: {
+        type: "object",
+        properties: {
+          query: {
+            type: "string",
+            description: "SQL or NoSQL query to execute"
+          },
+          database: {
+            type: "string",
+            description: "Target database (main, analytics, cache, etc.)"
+          }
+        },
+        required: ["query"]
+      }
+    }
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "manage_files",
+      description: "Create, read, modify, or delete files in the system",
+      parameters: {
+        type: "object",
+        properties: {
+          operation: {
+            type: "string",
+            enum: ["create", "read", "update", "delete", "list"],
+            description: "File operation to perform"
+          },
+          path: {
+            type: "string",
+            description: "File or directory path"
+          },
+          content: {
+            type: "string",
+            description: "File content (for create/update operations)"
+          }
+        },
+        required: ["operation", "path"]
+      }
+    }
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "network_diagnostics",
+      description: "Perform network diagnostics including ping, traceroute, and connectivity tests",
+      parameters: {
+        type: "object",
+        properties: {
+          target: {
+            type: "string",
+            description: "Target host, IP address, or URL to test"
+          },
+          test_type: {
+            type: "string",
+            enum: ["ping", "traceroute", "dns", "port", "speed"],
+            description: "Type of network test to perform"
+          }
+        },
+        required: ["target"]
+      }
+    }
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "security_scan",
+      description: "Scan URLs, files, or content for security vulnerabilities and threats",
+      parameters: {
+        type: "object",
+        properties: {
+          url: {
+            type: "string",
+            description: "URL or content to scan for security issues"
+          },
+          scan_type: {
+            type: "string",
+            enum: ["basic", "comprehensive", "malware", "phishing", "ssl"],
+            description: "Type of security scan to perform"
+          }
+        },
+        required: ["url"]
+      }
+    }
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "advanced_summarize",
+      description: "Advanced text summarization with multiple algorithms and customizable output",
+      parameters: {
+        type: "object",
+        properties: {
+          text: {
+            type: "string",
+            description: "Text content to summarize"
+          },
+          method: {
+            type: "string",
+            enum: ["extractive", "abstractive", "hybrid", "keyword"],
+            description: "Summarization method to use"
+          },
+          length: {
+            type: "string",
+            enum: ["short", "medium", "long"],
+            description: "Target summary length"
+          }
+        },
+        required: ["text"]
       }
     }
   },
