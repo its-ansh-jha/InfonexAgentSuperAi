@@ -3,6 +3,7 @@ import { db } from "../db";
 import { images, pdfs } from "@shared/schema";
 import PDFDocument from "pdfkit";
 import { searchSerper } from "./serper";
+import QRCode from "qrcode";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || '',
@@ -462,16 +463,82 @@ END:VCALENDAR
 
 async function handleQRCodeGeneration(data: string, size: number, format: string): Promise<string> {
   try {
-    // This would use a QR code generation library like 'qrcode'
-    // For now, we'll return a placeholder response
+    const timestamp = Date.now();
+    let qrCodeResults: string[] = [];
+
+    // Generate PNG version
+    const pngBuffer = await QRCode.toBuffer(data, {
+      type: 'png',
+      width: size,
+      margin: 2,
+      color: {
+        dark: '#000000',
+        light: '#FFFFFF'
+      }
+    });
+    
+    // Convert to base64 for database storage
+    const pngBase64 = pngBuffer.toString('base64');
+    const pngDataUrl = `data:image/png;base64,${pngBase64}`;
+    
+    // Generate filename
+    const pngFilename = `qrcode-${timestamp}.png`;
+    
+    // Store PNG in database
+    const [savedPngImage] = await db.insert(images).values({
+      originalUrl: 'qrcode-generated',
+      filename: pngFilename,
+      mimeType: "image/png",
+      imageData: pngDataUrl,
+      prompt: `QR Code: ${data}`
+    }).returning();
+
+    qrCodeResults.push(`**PNG Version:**\n![QR Code](${pngDataUrl})\n[Download PNG](/api/images/download/${savedPngImage.id})`);
+
+    // Generate SVG version if requested
+    if (format === 'svg' || format === 'both') {
+      const svgString = await QRCode.toString(data, {
+        type: 'svg',
+        width: size,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF'
+        }
+      });
+      
+      // Convert SVG to base64 for database storage
+      const svgBase64 = Buffer.from(svgString).toString('base64');
+      const svgDataUrl = `data:image/svg+xml;base64,${svgBase64}`;
+      
+      const svgFilename = `qrcode-${timestamp}.svg`;
+      
+      // Store SVG in database
+      const [savedSvgImage] = await db.insert(images).values({
+        originalUrl: 'qrcode-generated-svg',
+        filename: svgFilename,
+        mimeType: "image/svg+xml",
+        imageData: svgDataUrl,
+        prompt: `QR Code SVG: ${data}`
+      }).returning();
+
+      qrCodeResults.push(`**SVG Version:**\n[Download SVG](/api/images/download/${savedSvgImage.id})`);
+    }
+
     return `📱 QR Code Generated Successfully!
-**Data:** ${data}
+
+**Encoded Data:** ${data}
 **Size:** ${size}x${size} pixels
 **Format:** ${format}
 
-*QR Code Generation: This would integrate with a QR code library like 'qrcode' npm package*
+${qrCodeResults.join('\n\n')}
 
-To generate the actual QR code, the data "${data}" would be encoded into a ${size}x${size} ${format} image.`;
+**Usage Instructions:**
+- Scan with any QR code reader
+- The QR code contains: "${data}"
+- Both formats are stored in the database
+- Click the download links to save locally`;
+
   } catch (error: any) {
     return `❌ QR code generation failed: ${error.message}`;
   }
