@@ -267,7 +267,7 @@ export function ChatMessage({ message, useTypingAnimation = false }: ChatMessage
     <div className={`flex items-start ${isUser ? 'justify-end space-x-3' : 'space-x-3'} mb-6`}>
       {!isUser && (
         <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 mt-1 soft-glow">
-          <img src={logoImage} alt="Infonex Logo" className="w-full h-full object-cover" />
+          <img src="https://infonex-agent.onrender.com/assets/logo-Cq5xYOQH.webp" alt="Infonex Logo" className="w-full h-full object-cover" />
         </div>
       )}
 
