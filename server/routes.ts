@@ -115,6 +115,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: 'Failed to serve PDF' });
     }
   });
+
+  // Image download endpoint (forces download instead of inline display)
+  app.get("/api/images/download/:id", async (req, res) => {
+    try {
+      const imageId = parseInt(req.params.id);
+      
+      if (isNaN(imageId)) {
+        return res.status(400).json({ error: 'Invalid image ID' });
+      }
+      
+      // Get image from database
+      const [image] = await db.select().from(images).where(eq(images.id, imageId));
+      
+      if (!image) {
+        return res.status(404).json({ error: 'Image not found' });
+      }
+      
+      // Convert base64 back to buffer
+      const imageBuffer = Buffer.from(image.imageData.split(',')[1] || image.imageData, 'base64');
+      
+      // Set appropriate headers for download
+      res.set({
+        'Content-Type': image.mimeType,
+        'Content-Length': imageBuffer.length.toString(),
+        'Content-Disposition': `attachment; filename="${image.filename}"`,
+        'Cache-Control': 'public, max-age=31536000'
+      });
+      
+      res.send(imageBuffer);
+    } catch (error: any) {
+      log(`Error downloading image: ${error.message}`, "error");
+      res.status(500).json({ error: 'Failed to download image' });
+    }
+  });
+
+  // PDF download endpoint (forces download instead of inline display)
+  app.get("/api/pdfs/download/:id", async (req, res) => {
+    try {
+      const pdfId = parseInt(req.params.id);
+      
+      if (isNaN(pdfId)) {
+        return res.status(400).json({ error: 'Invalid PDF ID' });
+      }
+      
+      // Get PDF from database
+      const [pdf] = await db.select().from(pdfs).where(eq(pdfs.id, pdfId));
+      
+      if (!pdf) {
+        return res.status(404).json({ error: 'PDF not found' });
+      }
+      
+      // Convert base64 back to buffer
+      const pdfBuffer = Buffer.from(pdf.pdfData, 'base64');
+      
+      // Set appropriate headers for download
+      res.set({
+        'Content-Type': 'application/pdf',
+        'Content-Length': pdfBuffer.length.toString(),
+        'Content-Disposition': `attachment; filename="${pdf.filename}"`,
+        'Cache-Control': 'public, max-age=31536000'
+      });
+      
+      res.send(pdfBuffer);
+    } catch (error: any) {
+      log(`Error downloading PDF: ${error.message}`, "error");
+      res.status(500).json({ error: 'Failed to download PDF' });
+    }
+  });
   
   // Chat completion endpoint
   app.post("/api/chat", async (req, res) => {
