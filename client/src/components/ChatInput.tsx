@@ -28,6 +28,7 @@ export function ChatInput() {
   const [imageNames, setImageNames] = useState<string[]>([]);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -87,6 +88,9 @@ export function ChatInput() {
   const handleVoiceInput = () => {
     if (isListening) {
       // Stop listening if already active
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
       setIsListening(false);
       return;
     }
@@ -101,21 +105,37 @@ export function ChatInput() {
       return;
     }
 
+    // Stop any existing recognition instance
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+    }
+
     // Create a new SpeechRecognition instance
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
+    recognitionRef.current = recognition;
 
     recognition.continuous = false;
-    recognition.interimResults = true;
+    recognition.interimResults = false; // Only get final results to prevent duplication
     recognition.lang = 'en-US';
 
     // Handle recognition results
     recognition.onresult = (event) => {
-      const transcript = Array.from(event.results)
-        .map(result => result[0].transcript)
-        .join('');
-
-      setInput(prevInput => prevInput + ' ' + transcript);
+      let finalTranscript = '';
+      
+      // Only process final results to avoid duplication
+      for (let i = 0; i < event.results.length; i++) {
+        if (event.results[i].isFinal) {
+          finalTranscript += event.results[i][0].transcript;
+        }
+      }
+      
+      if (finalTranscript.trim()) {
+        setInput(prevInput => {
+          const newText = prevInput.trim() ? prevInput + ' ' + finalTranscript.trim() : finalTranscript.trim();
+          return newText;
+        });
+      }
     };
 
     // Handle end of recognition
@@ -379,8 +399,8 @@ export function ChatInput() {
                       data-testid="button-search-info"
                       onClick={() => {
                         toast({
-                          title: "🔍 AI Search Already Built-in",
-                          description: "GPT-5 has automatic web search capabilities. Just ask any question that requires current information and the AI will search for you!",
+                          title:  "Web Search Already Built-in",
+                          description: "InfonexAgent has automatic web search capabilities. Just ask any question that requires current information and the AI will search for you!",
                           duration: 4000,
                         });
                       }}
