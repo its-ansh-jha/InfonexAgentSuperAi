@@ -49,8 +49,30 @@ export function ChatMessage({ message, useTypingAnimation = false }: ChatMessage
   let images: string[] = [];
   let pdfLinks: Array<{url: string, title: string}> = [];
 
+  // Helper function to extract markdown images from text
+  const extractMarkdownImages = (text: string) => {
+    const markdownImageRegex = /!\[([^\]]*)\]\(([^)]+)\)/g;
+    const foundImages: string[] = [];
+    let match;
+    let cleanedText = text;
+    
+    while ((match = markdownImageRegex.exec(text)) !== null) {
+      const imageUrl = match[2];
+      // Only extract data URLs or our API URLs
+      if (imageUrl.startsWith('data:image') || imageUrl.startsWith('/api/images/')) {
+        foundImages.push(imageUrl);
+        // Remove the markdown syntax from the text
+        cleanedText = cleanedText.replace(match[0], '');
+      }
+    }
+    
+    return { images: foundImages, cleanedText };
+  };
+
   if (typeof content === 'string') {
-    contentString = content;
+    const { images: extractedImages, cleanedText } = extractMarkdownImages(content);
+    contentString = cleanedText;
+    images.push(...extractedImages);
   } else if (Array.isArray(content)) {
     // Extract image data, PDF links, and text content separately
     const textParts = [];
@@ -74,7 +96,10 @@ export function ChatMessage({ message, useTypingAnimation = false }: ChatMessage
         });
       }
     }
-    contentString = textParts.join('\n');
+    const joinedText = textParts.join('\n');
+    const { images: extractedImages, cleanedText } = extractMarkdownImages(joinedText);
+    contentString = cleanedText;
+    images.push(...extractedImages);
   } else {
     contentString = 'Content could not be displayed';
   }
@@ -394,27 +419,8 @@ export function ChatMessage({ message, useTypingAnimation = false }: ChatMessage
                 </span>
               );
             } else {
-              // Use typing animation for assistant messages and text content
-              if (!isUser && useTypingAnimation && index === 0) {
-                return (
-                  <p key={index} className="whitespace-pre-line">
-                    <TypingAnimation 
-                      text={part.text} 
-                      speed={15}
-                      isTyping={isTyping}
-                      onComplete={() => {
-                        // Typing animation completed, stop the global typing state silently
-                        stopTyping();
-                      }}
-                      onStop={() => {
-                        // Typing was stopped manually, no notification needed
-                      }}
-                    />
-                  </p>
-                );
-              } else {
-                return <p key={index} className="whitespace-pre-line">{part.text}</p>;
-              }
+              // No typing animation - display text immediately
+              return <p key={index} className="whitespace-pre-line">{part.text}</p>;
             }
           })}
         </div>
