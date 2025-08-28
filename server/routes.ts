@@ -459,3 +459,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
   return httpServer;
 }
+import { Request, Response } from "express";
+import { getTotalTokensSent, resetTokenCounter } from "./utils/tokenCounter";
+
+// Add this endpoint after your existing routes
+app.get("/api/token-stats", (req: Request, res: Response) => {
+  try {
+    const stats = getTotalTokensSent();
+    res.json({
+      success: true,
+      data: {
+        totalTokensSent: stats.total,
+        totalRequests: stats.requests,
+        averageTokensPerRequest: stats.average,
+        estimatedCost: {
+          inputCostUSD: (stats.total / 1000000) * 5.00, // GPT-5 pricing (estimated)
+          note: "Cost estimation based on GPT-5 input pricing"
+        }
+      }
+    });
+  } catch (error: any) {
+    log(`Error getting token stats: ${error.message}`, "error");
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.post("/api/reset-token-counter", (req: Request, res: Response) => {
+  try {
+    resetTokenCounter();
+    res.json({ success: true, message: "Token counter reset successfully" });
+  } catch (error: any) {
+    log(`Error resetting token counter: ${error.message}`, "error");
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
