@@ -32,7 +32,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Get current chat from ChatHistoryContext
   const { currentChat, updateCurrentChat, startNewChat, deleteChat } = useChatHistory();
-  
+
   // Get web search setting
   const { isWebSearchEnabled } = useWebSearch();
 
@@ -168,7 +168,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
           return msg;
         });
-        
+
         aiResponse = await sendMessage(content, 'gpt-5', messagesForAPI);
       }
 
@@ -185,6 +185,11 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Set this as the last message ID and start typing animation
       setLastMessageId(newMessage.timestamp);
       setIsTyping(true);
+
+      // Auto-stop typing after a reasonable duration (3 seconds)
+      setTimeout(() => {
+        setIsTyping(false);
+      }, 3000);
     } catch (error: any) {
       console.error('Error sending message:', error);
 
@@ -298,7 +303,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
           return msg;
         });
-        
+
         aiResponse = await sendMessageWithImage(
           textContent,
           imageData,
@@ -322,7 +327,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
           return msg;
         });
-        
+
         aiResponse = await sendMessage(
           textContent,
           'gpt-5',
@@ -343,6 +348,11 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Set this as the last message ID and start typing animation
       setLastMessageId(newMessage.timestamp);
       setIsTyping(true);
+
+      // Auto-stop typing after a reasonable duration (3 seconds)
+      setTimeout(() => {
+        setIsTyping(false);
+      }, 3000);
 
       toast({
         title: 'Response regenerated',
@@ -569,7 +579,7 @@ Please synthesize this information and provide a helpful response that directly 
             }
             return msg;
           });
-          
+
           aiResponse = await sendMessageWithImage(
             typeof userMessage.content === 'string' ? userMessage.content : '',
             imageData,
@@ -593,7 +603,7 @@ Please synthesize this information and provide a helpful response that directly 
             }
             return msg;
           });
-          
+
           aiResponse = await sendMessage(
             content,
             'gpt-5',
@@ -750,7 +760,7 @@ Please synthesize this information and provide a helpful response that directly 
       });
     } catch (error: any) {
       console.error('Failed to search and respond:', error);
-      
+
       // Extract meaningful error message
       let errorMessage = 'Failed to search for information';
 
@@ -761,7 +771,7 @@ Please synthesize this information and provide a helpful response that directly 
       } else if (typeof error === 'string') {
         errorMessage = error;
       }
-      
+
       console.error('Detailed search error:', errorMessage);
       toast({
         title: 'Error',

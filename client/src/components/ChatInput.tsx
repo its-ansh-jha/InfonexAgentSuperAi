@@ -494,13 +494,15 @@ export function ChatInput() {
                 type={isLoading || isTyping ? "button" : "submit"}
                 onClick={(isLoading || isTyping) ? (isLoading ? stopGeneration : stopTyping) : undefined}
                 disabled={isUploadingImage || (!(isLoading || isTyping) && (!input.trim() && imageFiles.length === 0))}
-                className={`h-9 w-9 rounded-full text-white shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-all duration-300 ${
+                className={`h-9 w-9 rounded-full text-white shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-all duration-200 ${
                   (isLoading || isTyping)
                     ? 'bg-muted-foreground hover:bg-muted-foreground/80 shadow-lg' 
                     : 'bg-primary hover:bg-primary/90'
                 }`}
               >
-                {(isLoading || isTyping) ? (
+                {isLoading ? (
+                  <Square className="h-4 w-4" />
+                ) : isTyping ? (
                   <Square className="h-4 w-4" />
                 ) : (
                   <Send className="h-5 w-5" />
