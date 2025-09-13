@@ -525,7 +525,7 @@ export function ChatInput() {
               <span className="text-red-400">Listening...</span>
             ) : (
               <span>
-                Infonex is using GPT-5 to generate human-like text and analyze images
+                InfonexAgent is using Infonex Ai to generate human-like text and analyze images
               </span>
             )}
           </div>
