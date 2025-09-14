@@ -38,24 +38,6 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Validate required environment variables at startup
-  const requiredEnvVars = [
-    'SESSION_SECRET',
-    'REPL_ID', 
-    'DATABASE_URL',
-    'OPENAI_API_KEY'
-  ];
-
-  const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
-  
-  if (missingVars.length > 0) {
-    log(`❌ Missing required environment variables: ${missingVars.join(', ')}`, "error");
-    log("Please ensure all required environment variables are set before starting the application.", "error");
-    process.exit(1);
-  }
-
-  log("✅ All required environment variables are present");
-  
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
