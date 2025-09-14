@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { useChat } from '@/context/ChatContext';
 import { autoResizeTextarea } from '@/utils/helpers';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import { 
   Tooltip, 
   TooltipContent, 
@@ -34,6 +35,7 @@ export function ChatInput() {
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const { sendUserMessage, searchAndRespond, isLoading, isTyping, stopGeneration, stopTyping } = useChat();
   const { toast } = useToast();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
 
   // Auto-resize textarea on input
   useEffect(() => {
@@ -44,6 +46,17 @@ export function ChatInput() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Check authentication first
+    if (!isAuthenticated) {
+      toast({
+        title: "Sign In Required",
+        description: "Please sign in to send messages. Click the Sign In button in the header to get started.",
+        variant: "destructive",
+        duration: 5000,
+      });
+      return;
+    }
 
     // Prevent multiple submissions and ensure we have content
     if (isLoading || isUploadingImage || (!input.trim() && imageFiles.length === 0)) return;
@@ -458,14 +471,17 @@ export function ChatInput() {
               onKeyDown={handleKeyDown}
               rows={1}
               placeholder={
-                isUploadingImage 
-                  ? "Processing images..." 
-                  : imageFiles.length > 0
-                      ? `Ask about ${imageFiles.length} image${imageFiles.length !== 1 ? 's' : ''}...`
-                      : "Ask Anything..."
+                !isAuthenticated
+                  ? "Please sign in to start chatting..."
+                  : isUploadingImage 
+                      ? "Processing images..." 
+                      : imageFiles.length > 0
+                          ? `Ask about ${imageFiles.length} image${imageFiles.length !== 1 ? 's' : ''}...`
+                          : "Ask Anything..."
               }
               className="flex-1 py-3 px-3 bg-transparent border-none focus:outline-none focus:ring-0 resize-none text-white placeholder-neutral-500 min-h-[44px] max-h-[200px]"
-              disabled={isLoading || isUploadingImage}
+              disabled={!isAuthenticated || isLoading || isUploadingImage}
+              data-testid="textarea-chat-input"
             />
 
             <div className="flex items-center pr-2 space-x-1">
@@ -493,12 +509,13 @@ export function ChatInput() {
               <Button
                 type={isLoading || isTyping ? "button" : "submit"}
                 onClick={(isLoading || isTyping) ? (isLoading ? stopGeneration : stopTyping) : undefined}
-                disabled={isUploadingImage || (!(isLoading || isTyping) && (!input.trim() && imageFiles.length === 0))}
+                disabled={!isAuthenticated || isUploadingImage || (!(isLoading || isTyping) && (!input.trim() && imageFiles.length === 0))}
                 className={`h-9 w-9 rounded-full text-white shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-all duration-200 ${
                   (isLoading || isTyping)
                     ? 'bg-muted-foreground hover:bg-muted-foreground/80 shadow-lg' 
                     : 'bg-primary hover:bg-primary/90'
                 }`}
+                data-testid="button-send-message"
               >
                 {isLoading ? (
                   <Square className="h-4 w-4" />
