@@ -32,7 +32,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Configure multer for image uploads (memory storage)
-  const upload = multer({ 
+  const upload = multer({
     storage: multer.memoryStorage(),
     limits: {
       fileSize: 8 * 1024 * 1024, // 8MB max file size
@@ -42,11 +42,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/search', async (req, res) => {
     try {
       const { query } = req.body;
-      
+
       if (!query || typeof query !== 'string') {
         return res.status(400).json({ error: 'Query is required and must be a string' });
       }
-      
+
       // Use Serper API for real web search results
       const data = await searchSerper(query);
       res.json(data);
@@ -68,21 +68,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/images/:id", async (req, res) => {
     try {
       const imageId = parseInt(req.params.id);
-      
+
       if (isNaN(imageId)) {
         return res.status(400).json({ error: 'Invalid image ID' });
       }
-      
+
       // Get image from database
       const [image] = await db.select().from(images).where(eq(images.id, imageId));
-      
+
       if (!image) {
         return res.status(404).json({ error: 'Image not found' });
       }
-      
+
       // Convert base64 back to buffer
       const imageBuffer = Buffer.from(image.imageData, 'base64');
-      
+
       // Set appropriate headers
       res.set({
         'Content-Type': image.mimeType,
@@ -90,7 +90,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'Content-Disposition': `inline; filename="${image.filename}"`,
         'Cache-Control': 'public, max-age=31536000' // Cache for 1 year since images are immutable
       });
-      
+
       res.send(imageBuffer);
     } catch (error: any) {
       log(`Error serving image: ${error.message}`, "error");
@@ -102,21 +102,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/pdfs/:id", async (req, res) => {
     try {
       const pdfId = parseInt(req.params.id);
-      
+
       if (isNaN(pdfId)) {
         return res.status(400).json({ error: 'Invalid PDF ID' });
       }
-      
+
       // Get PDF from database
       const [pdf] = await db.select().from(pdfs).where(eq(pdfs.id, pdfId));
-      
+
       if (!pdf) {
         return res.status(404).json({ error: 'PDF not found' });
       }
-      
+
       // Convert base64 back to buffer
       const pdfBuffer = Buffer.from(pdf.pdfData, 'base64');
-      
+
       // Set appropriate headers
       res.set({
         'Content-Type': 'application/pdf',
@@ -124,7 +124,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'Content-Disposition': `inline; filename="${pdf.filename}"`,
         'Cache-Control': 'public, max-age=31536000' // Cache for 1 year since PDFs are immutable
       });
-      
+
       res.send(pdfBuffer);
     } catch (error: any) {
       log(`Error serving PDF: ${error.message}`, "error");
@@ -136,21 +136,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/images/download/:id", async (req, res) => {
     try {
       const imageId = parseInt(req.params.id);
-      
+
       if (isNaN(imageId)) {
         return res.status(400).json({ error: 'Invalid image ID' });
       }
-      
+
       // Get image from database
       const [image] = await db.select().from(images).where(eq(images.id, imageId));
-      
+
       if (!image) {
         return res.status(404).json({ error: 'Image not found' });
       }
-      
+
       // Convert base64 back to buffer
       const imageBuffer = Buffer.from(image.imageData.split(',')[1] || image.imageData, 'base64');
-      
+
       // Set appropriate headers for download
       res.set({
         'Content-Type': image.mimeType,
@@ -158,7 +158,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'Content-Disposition': `attachment; filename="${image.filename}"`,
         'Cache-Control': 'public, max-age=31536000'
       });
-      
+
       res.send(imageBuffer);
     } catch (error: any) {
       log(`Error downloading image: ${error.message}`, "error");
@@ -170,21 +170,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/pdfs/download/:id", async (req, res) => {
     try {
       const pdfId = parseInt(req.params.id);
-      
+
       if (isNaN(pdfId)) {
         return res.status(400).json({ error: 'Invalid PDF ID' });
       }
-      
+
       // Get PDF from database
       const [pdf] = await db.select().from(pdfs).where(eq(pdfs.id, pdfId));
-      
+
       if (!pdf) {
         return res.status(404).json({ error: 'PDF not found' });
       }
-      
+
       // Convert base64 back to buffer
       const pdfBuffer = Buffer.from(pdf.pdfData, 'base64');
-      
+
       // Set appropriate headers for download
       res.set({
         'Content-Type': 'application/pdf',
@@ -192,30 +192,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'Content-Disposition': `attachment; filename="${pdf.filename}"`,
         'Cache-Control': 'public, max-age=31536000'
       });
-      
+
       res.send(pdfBuffer);
     } catch (error: any) {
       log(`Error downloading PDF: ${error.message}`, "error");
       res.status(500).json({ error: 'Failed to download PDF' });
     }
   });
-  
+
   // Chat completion endpoint with auth and rate limiting
   app.post("/api/chat", checkDailyLimit, incrementUsage, async (req, res) => {
     try {
       // Validate request payload
       const validationResult = chatCompletionRequestSchema.safeParse(req.body);
-      
+
       if (!validationResult.success) {
-        return res.status(400).json({ 
-          message: "Invalid request format", 
-          errors: validationResult.error.format() 
+        return res.status(400).json({
+          message: "Invalid request format",
+          errors: validationResult.error.format()
         });
       }
-      
+
       const chatRequest = validationResult.data;
       let response;
-      
+
       // Route to appropriate model
       if (chatRequest.model === "gpt-5") {
         // Use OpenAI's GPT-5
@@ -240,24 +240,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         return res.status(400).json({ message: "Invalid model selection" });
       }
-      
+
       // Log the response for debugging
       let previewContent = 'Complex content structure';
       let formattedResponse;
-      
+
       // Handle different response formats with proper type checking
       const hasRole = typeof response === 'object' && response !== null && 'role' in response;
       const hasContent = typeof response === 'object' && response !== null && 'content' in response;
       const hasMessage = typeof response === 'object' && response !== null && 'message' in response;
-      
+
       if (hasRole && hasContent) {
         // Direct format from Maverick service
         const typedResponse = response as unknown as { role: string; content: any; model?: string };
-        
+
         if (typeof typedResponse.content === 'string') {
           previewContent = typedResponse.content.substring(0, 50);
         }
-        
+
         formattedResponse = {
           message: {
             role: typedResponse.role,
@@ -269,7 +269,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Already in message format
         const typedResponse = response as { message: { role: string; content: string }; model: string };
         formattedResponse = typedResponse;
-        
+
         if (typeof typedResponse.message.content === 'string') {
           previewContent = typedResponse.message.content.substring(0, 50);
         }
@@ -283,9 +283,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           model: chatRequest.model
         };
       }
-      
+
       log(`Model ${chatRequest.model} response: ${previewContent}...`);
-      
+
       // Store messages in the database if sessionId is provided
       if (chatRequest.sessionId) {
         try {
@@ -294,14 +294,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (lastUserMessage.role === 'user') {
             await db.insert(messages).values({
               role: lastUserMessage.role,
-              content: typeof lastUserMessage.content === 'string' 
-                ? lastUserMessage.content 
+              content: typeof lastUserMessage.content === 'string'
+                ? lastUserMessage.content
                 : JSON.stringify(lastUserMessage.content),
               model: chatRequest.model,
               sessionId: parseInt(chatRequest.sessionId)
             });
           }
-          
+
           // Then store the assistant's response
           await db.insert(messages).values({
             role: formattedResponse.message.role,
@@ -309,7 +309,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             model: formattedResponse.model,
             sessionId: parseInt(chatRequest.sessionId)
           });
-          
+
           // Update the chat session's updatedAt timestamp
           await db
             .update(chatSessions)
@@ -320,7 +320,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Continue with the response even if database storage fails
         }
       }
-      
+
       // Return the standardized response
       return res.status(200).json(formattedResponse);
     } catch (error: any) {
@@ -343,11 +343,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/chat-sessions", async (req, res) => {
     try {
       const validationResult = insertChatSessionSchema.safeParse(req.body);
-      
+
       if (!validationResult.success) {
-        return res.status(400).json({ 
-          message: "Invalid request format", 
-          errors: validationResult.error.format() 
+        return res.status(400).json({
+          message: "Invalid request format",
+          errors: validationResult.error.format()
         });
       }
 
@@ -380,7 +380,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/chat-sessions/:id", async (req, res) => {
     try {
       const sessionId = parseInt(req.params.id);
-      
+
       if (isNaN(sessionId)) {
         return res.status(400).json({ message: "Invalid session ID" });
       }
@@ -413,7 +413,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/chat-sessions/:id", async (req, res) => {
     try {
       const sessionId = parseInt(req.params.id);
-      
+
       if (isNaN(sessionId)) {
         return res.status(400).json({ message: "Invalid session ID" });
       }
@@ -443,15 +443,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Health check endpoint
   app.get("/api/health", (req, res) => {
     const missingKeys = [];
-    
+
     if (!process.env.OPENAI_API_KEY) {
       missingKeys.push("OPENAI_API_KEY");
     }
-    
+
     if (!process.env.OPENAI_MINI_API_KEY) {
       missingKeys.push("OPENAI_MINI_API_KEY");
     }
-    
+
     if (!process.env.OPENROUTER_API_KEY) {
       missingKeys.push("OPENROUTER_API_KEY");
     }
@@ -461,14 +461,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     // OpenAI API key is already checked above - no additional search API key needed
-    
+
     if (missingKeys.length > 0) {
-      return res.status(500).json({ 
-        status: "error", 
-        message: `Missing environment variables: ${missingKeys.join(", ")}` 
+      return res.status(500).json({
+        status: "error",
+        message: `Missing environment variables: ${missingKeys.join(", ")}`
       });
     }
-    
+
     return res.status(200).json({ status: "ok" });
   });
 

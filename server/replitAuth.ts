@@ -85,14 +85,14 @@ export async function setupAuth(app: Express) {
   };
 
   const domains = process.env.REPLIT_DOMAINS?.split(",") || [];
-  
+
   if (domains.length === 0) {
     console.warn("No domains configured for Replit Auth - using fallback configuration");
     // For external deployments, you'll need to configure this manually
     // or disable auth entirely for external domains
     return;
   }
-  
+
   for (const domain of domains) {
     const strategy = new Strategy(
       {
@@ -173,23 +173,20 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
 // Middleware to check daily usage limits for non-authenticated users
 export const checkDailyLimit: RequestHandler = async (req, res, next) => {
   // If user is authenticated, skip the limit check
-  if (req.isAuthenticated()) {
-    return next();
-  }
 
   const clientIp = req.ip || req.connection.remoteAddress || 'unknown';
   const today = new Date().toISOString().split('T')[0];
-  
+
   try {
     const usage = await storage.getDailyUsage(clientIp, today);
-    
+
     if (usage && usage.messageCount >= 5) {
       return res.status(429).json({ 
         message: "Daily message limit reached. Please sign in to continue using the service.",
         requiresAuth: true 
       });
     }
-    
+
     return next();
   } catch (error) {
     // If we can't check usage, allow the request but log the error
@@ -203,13 +200,13 @@ export const incrementUsage: RequestHandler = async (req, res, next) => {
   // Only increment for non-authenticated users
   if (!req.isAuthenticated()) {
     const clientIp = req.ip || req.connection.remoteAddress || 'unknown';
-    
+
     try {
       await storage.incrementDailyUsage(clientIp);
     } catch (error) {
       console.error('Error incrementing daily usage:', error);
     }
   }
-  
+
   return next();
 };
