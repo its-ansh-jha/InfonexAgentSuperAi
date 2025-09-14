@@ -1,4 +1,4 @@
-modules = ["nodejs-20", "web"]
+modules = ["nodejs-20", "web", "postgresql-16"]
 run = "npm run dev"
 hidden = [".config", ".git", "generated-icon.png", "node_modules", "dist"]
 
@@ -15,7 +15,7 @@ localPort = 5000
 externalPort = 80
 
 [[ports]]
-localPort = 35195
+localPort = 46517
 externalPort = 3000
 
 [workflows]
@@ -40,4 +40,5 @@ args = "npm run dev"
 waitForPort = 5000
 
 [agent]
-integrations = ["javascript_database==1.0.0"]
+integrations = ["javascript_database:1.0.0", "javascript_log_in_with_replit:1.0.0"]
+expertMode = true

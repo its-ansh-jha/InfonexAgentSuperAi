@@ -13,8 +13,24 @@ import { db } from "./db";
 import { messages, chatSessions } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import multer from 'multer';
+import { setupAuth, isAuthenticated, checkDailyLimit, incrementUsage } from './replitAuth';
+import { storage } from './storage';
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Auth middleware
+  await setupAuth(app);
+  // Auth routes
+  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
   // Configure multer for image uploads (memory storage)
   const upload = multer({ 
     storage: multer.memoryStorage(),
@@ -39,7 +55,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: error.message || 'Web search failed' });
     }
   });
-  app.post("/api/upload-image", upload.single('image'), async (req, res) => {
+  app.post("/api/upload-image", isAuthenticated, upload.single('image'), async (req, res) => {
     try {
       await handleImageUpload(req, res);
     } catch (error: any) {
@@ -184,8 +200,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Chat completion endpoint
-  app.post("/api/chat", async (req, res) => {
+  // Chat completion endpoint with auth and rate limiting
+  app.post("/api/chat", checkDailyLimit, incrementUsage, async (req, res) => {
     try {
       // Validate request payload
       const validationResult = chatCompletionRequestSchema.safeParse(req.body);
