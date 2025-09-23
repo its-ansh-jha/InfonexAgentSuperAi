@@ -14,6 +14,10 @@ run = ["npm", "run", "start"]
 localPort = 5000
 externalPort = 80
 
+[[ports]]
+localPort = 33445
+externalPort = 3000
+
 [workflows]
 runButton = "Project"
 
@@ -37,3 +41,4 @@ waitForPort = 5000
 
 [agent]
 integrations = ["javascript_database==1.0.0"]
+expertMode = true
