@@ -10,6 +10,8 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
 import TermsConditions from "@/pages/TermsConditions";
+import { handleRedirectResult } from "@/lib/firebase";
+import { useEffect } from "react";
 
 function Router() {
   return (
@@ -23,6 +25,19 @@ function Router() {
 }
 
 function App() {
+  // Handle Firebase redirect on app load
+  useEffect(() => {
+    const handleAuthRedirect = async () => {
+      try {
+        await handleRedirectResult();
+      } catch (error) {
+        console.error('Error handling auth redirect:', error);
+      }
+    };
+    
+    handleAuthRedirect();
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>

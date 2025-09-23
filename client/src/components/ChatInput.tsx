@@ -1,7 +1,9 @@
 import React, { useRef, useState, useEffect, ChangeEvent } from 'react';
-import { Send, Volume2, ImagePlus, Image, X, Mic, Search, Camera, FolderOpen, Loader2, Square, Settings, Globe } from 'lucide-react';
+import { Send, Volume2, ImagePlus, Image, X, Mic, Search, Camera, FolderOpen, Loader2, Square, Settings, Globe, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChat } from '@/context/ChatContext';
+import { useAuth } from '@/hooks/useAuth';
+import { useUsageLimit } from '@/hooks/useUsageLimit';
 import { autoResizeTextarea } from '@/utils/helpers';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -34,6 +36,8 @@ export function ChatInput() {
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const { sendUserMessage, searchAndRespond, isLoading, isTyping, stopGeneration, stopTyping } = useChat();
   const { toast } = useToast();
+  const { isAuthenticated } = useAuth();
+  const { usage, incrementUsage } = useUsageLimit();
 
   // Auto-resize textarea on input
   useEffect(() => {
@@ -47,6 +51,17 @@ export function ChatInput() {
 
     // Prevent multiple submissions and ensure we have content
     if (isLoading || isUploadingImage || (!input.trim() && imageFiles.length === 0)) return;
+
+    // Check usage limits for non-authenticated users
+    if (!isAuthenticated && !usage.canSendMessage) {
+      toast({
+        title: "Daily Limit Reached",
+        description: `You've reached your daily limit of ${usage.limit} messages. Sign in to continue chatting without limits.`,
+        variant: "destructive",
+        duration: 5000,
+      });
+      return;
+    }
 
     // Store current state before clearing
     const currentInput = input.trim();
@@ -62,6 +77,11 @@ export function ChatInput() {
     }
 
     try {
+      // Increment usage count for non-authenticated users before sending
+      if (!isAuthenticated) {
+        await incrementUsage();
+      }
+      
       // Send the message with optional images
       await sendUserMessage(currentInput, currentImageFiles.length > 0 ? currentImageFiles : undefined);
     } catch (error) {
@@ -174,12 +194,32 @@ export function ChatInput() {
   };
 
   const handleGalleryClick = () => {
+    if (!isAuthenticated) {
+      toast({
+        title: "Sign In Required",
+        description: "Image upload is only available for signed-in users. Sign in to unlock this feature.",
+        variant: "destructive",
+        duration: 4000,
+      });
+      return;
+    }
+    
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
   };
 
   const handleCameraClick = () => {
+    if (!isAuthenticated) {
+      toast({
+        title: "Sign In Required",
+        description: "Camera capture is only available for signed-in users. Sign in to unlock this feature.",
+        variant: "destructive",
+        duration: 4000,
+      });
+      return;
+    }
+    
     if (cameraInputRef.current) {
       cameraInputRef.current.click();
     }
@@ -423,18 +463,25 @@ export function ChatInput() {
                             type="button"
                             variant="ghost"
                             size="icon"
-                            disabled={isUploadingImage}
-                            className={`h-9 w-9 rounded-full hover:bg-neutral-700 ${
+                            disabled={isUploadingImage || !isAuthenticated}
+                            className={`h-9 w-9 rounded-full hover:bg-neutral-700 ${!isAuthenticated ? 'opacity-50 cursor-not-allowed' : ''} ${
                               imageFiles.length > 0 ? 'text-primary hover:text-primary' : 'text-neutral-400 hover:text-white'
                             } ${isUploadingImage ? 'opacity-50 cursor-not-allowed' : ''}`}
                             data-testid="button-image-options"
                           >
-                            <ImagePlus className={`h-5 w-5 ${isUploadingImage ? 'animate-pulse' : ''}`} />
+                            {!isAuthenticated ? (
+                              <div className="relative">
+                                <ImagePlus className={`h-5 w-5 ${isUploadingImage ? 'animate-pulse' : ''}`} />
+                                <Lock className="h-2 w-2 absolute -top-1 -right-1 text-red-400" />
+                              </div>
+                            ) : (
+                              <ImagePlus className={`h-5 w-5 ${isUploadingImage ? 'animate-pulse' : ''}`} />
+                            )}
                           </Button>
                         </DropdownMenuTrigger>
                       </TooltipTrigger>
                       <TooltipContent side="top">
-                        <p>Add image</p>
+                        <p>{!isAuthenticated ? 'Sign in to add images' : 'Add image'}</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -442,10 +489,12 @@ export function ChatInput() {
                     <DropdownMenuItem onClick={handleCameraClick} className="cursor-pointer" data-testid="option-camera">
                       <Camera className="mr-2 h-4 w-4" />
                       Take Photo
+                      {!isAuthenticated && <Lock className="ml-auto h-4 w-4 text-red-400" />}
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={handleGalleryClick} className="cursor-pointer" data-testid="option-gallery">
                       <FolderOpen className="mr-2 h-4 w-4" />
                       Choose from Gallery
+                      {!isAuthenticated && <Lock className="ml-auto h-4 w-4 text-red-400" />}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -523,6 +572,20 @@ export function ChatInput() {
               </span>
             ) : isListening ? (
               <span className="text-red-400">Listening...</span>
+            ) : !isAuthenticated ? (
+              <div className="flex flex-col items-center gap-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-amber-400">Daily messages: {usage.messageCount}/{usage.limit}</span>
+                  {!usage.canSendMessage && (
+                    <span className="text-red-400 text-xs bg-red-900/20 px-2 py-1 rounded">
+                      Limit reached - Sign in to continue
+                    </span>
+                  )}
+                </div>
+                <span>
+                  InfonexAgent • Sign in for unlimited access and image features
+                </span>
+              </div>
             ) : (
               <span>
                 InfonexAgent is using Infonex Ai to generate human-like text and analyze images

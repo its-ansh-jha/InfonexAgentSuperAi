@@ -1,23 +1,19 @@
 import React from 'react';
-import { PlusCircle, Menu } from 'lucide-react';
+import { PlusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChat } from '@/context/ChatContext';
 import { useChatHistory } from '@/context/ChatHistoryContext';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import logoImage from '../assets/logo.webp';
-import { 
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { useLocation } from 'wouter';
+import { AuthButtons } from './AuthButtons';
+import { UserMenu } from './UserMenu';
 
 export function Header() {
   const { clearMessages } = useChat();
   const { startNewChat } = useChatHistory();
   const { toast } = useToast();
-  const [, navigate] = useLocation();
+  const { isAuthenticated, isLoading } = useAuth();
   
   const handleNewChat = () => {
     // Create a new chat
@@ -40,42 +36,34 @@ export function Header() {
             Infonex
           </h1>
         </div>
+        
+        {/* Conditional rendering based on authentication state */}
         <div className="flex items-center space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex items-center gap-1 text-sm px-3 py-1 rounded-full bg-neutral-800 hover:bg-neutral-700 border-neutral-700 text-white transition-colors"
-            onClick={handleNewChat}
-          >
-            <PlusCircle className="h-4 w-4 mr-1" />
-            New Chat
-          </Button>
-          
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+          {isLoading ? (
+            // Show loading state
+            <div className="flex items-center space-x-2">
+              <div className="animate-pulse bg-neutral-700 h-8 w-16 rounded-full"></div>
+              <div className="animate-pulse bg-neutral-700 h-8 w-8 rounded-full"></div>
+            </div>
+          ) : isAuthenticated ? (
+            // Authenticated users: show New Chat button and User Menu
+            <>
               <Button
                 variant="outline"
                 size="sm"
-                className="p-2 rounded-full bg-neutral-800 hover:bg-neutral-700 border-neutral-700 text-white transition-colors"
+                className="flex items-center gap-1 text-sm px-3 py-1 rounded-full bg-neutral-800 hover:bg-neutral-700 border-neutral-700 text-white transition-colors"
+                onClick={handleNewChat}
+                data-testid="button-new-chat"
               >
-                <Menu className="h-4 w-4" />
+                <PlusCircle className="h-4 w-4 mr-1" />
+                New Chat
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-neutral-800 border-neutral-700 text-white">
-              <DropdownMenuItem 
-                className="hover:bg-neutral-700 cursor-pointer" 
-                onClick={() => navigate("/privacy-policy")}
-              >
-                Privacy Policy
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                className="hover:bg-neutral-700 cursor-pointer" 
-                onClick={() => navigate("/terms-conditions")}
-              >
-                Terms & Conditions
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+              <UserMenu />
+            </>
+          ) : (
+            // Non-authenticated users: show Sign In and Sign Up buttons
+            <AuthButtons />
+          )}
         </div>
       </div>
       <div className="text-center pb-1 text-xs text-neutral-500">

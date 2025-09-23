@@ -1,18 +1,23 @@
-import { pgTable, text, serial, integer, timestamp, json } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, timestamp, json, varchar, boolean, date } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Updated users table for Firebase authentication
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
-  email: text("email").unique(),
+  firebaseUid: varchar("firebase_uid", { length: 255 }).notNull().unique(), // Firebase UID
+  email: text("email").notNull().unique(),
+  displayName: text("display_name"),
+  photoURL: text("photo_url"),
+  emailVerified: boolean("email_verified").default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   createdAt: true,
+  updatedAt: true,
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -141,3 +146,22 @@ export const insertPdfSchema = createInsertSchema(pdfs).omit({
 
 export type InsertPdf = z.infer<typeof insertPdfSchema>;
 export type Pdf = typeof pdfs.$inferSelect;
+
+// Daily usage tracking for non-authenticated users (by IP)
+export const dailyUsage = pgTable("daily_usage", {
+  id: serial("id").primaryKey(),
+  ipAddress: varchar("ip_address", { length: 45 }).notNull(), // IPv4 or IPv6
+  date: date("date").notNull(), // YYYY-MM-DD format
+  messageCount: integer("message_count").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertDailyUsageSchema = createInsertSchema(dailyUsage).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertDailyUsage = z.infer<typeof insertDailyUsageSchema>;
+export type DailyUsage = typeof dailyUsage.$inferSelect;

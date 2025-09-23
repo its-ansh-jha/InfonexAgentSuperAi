@@ -3,7 +3,7 @@ import { searchSerper } from './services/serper';
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { z } from "zod";
-import { chatCompletionRequestSchema, insertMessageSchema, insertChatSessionSchema, images, pdfs } from "@shared/schema";
+import { chatCompletionRequestSchema, insertMessageSchema, insertChatSessionSchema, images, pdfs, users, dailyUsage, type User, type InsertUser } from "@shared/schema";
 import { generateOpenAIResponse, generateOpenAIMiniResponse } from "./services/openai";
 import { generateDeepSeekResponse } from "./services/openrouter";
 import { generateMaverickResponse, handleImageUpload } from "./services/openrouter-maverick";
@@ -11,15 +11,114 @@ import { handleSearch } from "./services/search";
 import { log } from "./vite";
 import { db } from "./db";
 import { messages, chatSessions } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import multer from 'multer';
+import { storage } from './storage';
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Helper function to get client IP address
+  const getClientIP = (req: any) => {
+    return req.headers['x-forwarded-for'] || 
+           req.connection.remoteAddress || 
+           req.socket.remoteAddress ||
+           (req.connection.socket ? req.connection.socket.remoteAddress : null) ||
+           '127.0.0.1';
+  };
+
+  // Helper function to get today's date in YYYY-MM-DD format
+  const getTodayDate = () => {
+    return new Date().toISOString().split('T')[0];
+  };
+
   // Configure multer for image uploads (memory storage)
   const upload = multer({ 
     storage: multer.memoryStorage(),
     limits: {
       fileSize: 8 * 1024 * 1024, // 8MB max file size
+    }
+  });
+
+  // Firebase Authentication Routes
+  // Route to sync Firebase user with database
+  app.post('/api/auth/sync-user', async (req, res) => {
+    try {
+      const { firebaseUid, email, displayName, photoURL, emailVerified } = req.body;
+      
+      if (!firebaseUid || !email) {
+        return res.status(400).json({ error: 'Firebase UID and email are required' });
+      }
+
+      const userData: InsertUser = {
+        firebaseUid,
+        email,
+        displayName: displayName || null,
+        photoURL: photoURL || null,
+        emailVerified: emailVerified || false,
+      };
+
+      const user = await storage.createOrUpdateUser(userData);
+      res.json(user);
+    } catch (error: any) {
+      log(`Error syncing user: ${error.message}`, "error");
+      res.status(500).json({ error: 'Failed to sync user' });
+    }
+  });
+
+  // Route to get current user
+  app.get('/api/auth/user', async (req, res) => {
+    try {
+      // For now, return null since we're not implementing session-based auth
+      // In a full implementation, you'd validate the Firebase token here
+      res.json(null);
+    } catch (error: any) {
+      log(`Error getting user: ${error.message}`, "error");
+      res.status(500).json({ error: 'Failed to get user' });
+    }
+  });
+
+  // Usage tracking routes
+  // Route to get daily usage for non-authenticated users
+  app.get('/api/usage/daily', async (req, res) => {
+    try {
+      const clientIP = getClientIP(req);
+      const today = getTodayDate();
+      
+      const usage = await storage.getDailyUsage(clientIP, today);
+      const messageCount = usage?.messageCount || 0;
+      const limit = 10;
+      
+      res.json({
+        messageCount,
+        limit,
+        canSendMessage: messageCount < limit,
+        canGenerateImage: false,
+        canUploadImage: false,
+      });
+    } catch (error: any) {
+      log(`Error getting daily usage: ${error.message}`, "error");
+      res.status(500).json({ error: 'Failed to get usage data' });
+    }
+  });
+
+  // Route to increment message count for non-authenticated users
+  app.post('/api/usage/increment', async (req, res) => {
+    try {
+      const clientIP = getClientIP(req);
+      const today = getTodayDate();
+      
+      const updatedUsage = await storage.incrementDailyUsage(clientIP, today);
+      
+      const limit = 10;
+      res.json({
+        messageCount: updatedUsage.messageCount,
+        limit,
+        canSendMessage: updatedUsage.messageCount < limit,
+        canGenerateImage: false,
+        canUploadImage: false,
+      });
+    } catch (error: any) {
+      log(`Error incrementing usage: ${error.message}`, "error");
+      res.status(500).json({ error: 'Failed to update usage' });
     }
   });
   // Search endpoint for realtime data using Serper API
